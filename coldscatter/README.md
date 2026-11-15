@@ -1,0 +1,86 @@
+# coldscatter
+
+**Coupled-channel scattering for ultracold atoms and molecules, in readable, tested, pure Python.**
+
+`coldscatter` computes S/K matrices, scattering lengths, cross sections and Feshbach
+resonances for two colliding particles, from a set of radial channels you define.
+The goal is a community reference tool in the spirit of QuTiP and Pulser:
+a small, well-documented API on top of a numerically validated core.
+
+> **Status: v0.1 (pre-alpha).** The core solver is validated against analytic and
+> independent numerical results (see [Validation](#validation)). It has **not yet** been
+> cross-checked against MOLSCAT on realistic atomic/molecular Hamiltonians; that is the
+> first item on the [roadmap](docs/ROADMAP.md).
+
+## Quick start
+
+```bash
+pip install -e ".[examples]"
+```
+
+```python
+import coldscatter as cs
+from coldscatter import units as u
+
+mu = u.reduced_mass(87.0, 87.0)                       # atomic units
+c6 = 4700.0
+prob = cs.single_channel(mu, cs.LennardJones(c6, c6 * 11.0**6 / 2))
+res = prob.solve(u.from_kelvin(1e-7), cs.Grid(r_min=4.0, r_max=1500.0, step=0.01))
+print(res.scattering_length())      # complex, in bohr
+print(res.cross_sections())
+```
+
+Magnetic Feshbach resonance, batched over the field (one sweep of the grid serves all fields):
+
+```python
+model = cs.two_channel_feshbach(mu, c6, c12_open=c6 * 11.0**6 / 2, c12_closed=c6 * 10.4**6 / 2,
+                                coupling=2e-4, coupling_r0=11.0, coupling_sigma=1.5,
+                                delta_mu=2 * u.MU_B_HARTREE_PER_GAUSS)
+a = model.scan_field(B_gauss, u.from_kelvin(1e-7), cs.Grid(7.0, 800.0, 0.02))
+a_bg, B0, delta = cs.fit_feshbach(B_window, a_window.real)
+```
+
+![Feshbach resonance](docs/img/feshbach_scan.png)
+![van der Waals universality](docs/img/vdw_universality.png)
+
+## What is inside
+
+| module | role |
+|---|---|
+| `CoupledChannels` | N-channel radial problem: thresholds `E_i(B)`, potential matrix `V_ij(R)`, partial waves |
+| `renormalized_numerov` | stable matrix propagator (Johnson 1977), fast scalar path, batched-over-field path |
+| `asymptotics` | exact open/closed-channel matching with Riccati-Bessel functions, any `l` |
+| `ScatteringResult` | `K`, `S`, complex scattering length, elastic/inelastic/total cross sections |
+| `potentials`, `units` | Lennard-Jones, Gaussian, ..., vdW length and `a_bar`; atomic units, K, gauss |
+
+Conventions and equations: [docs/PHYSICS.md](docs/PHYSICS.md).
+
+## Validation
+
+Run `pytest` (or `python tests/run_all.py` without pytest). The suite checks:
+
+- square well against the analytic scattering length (relative error ~1e-6)
+- Lennard-Jones against an independent adaptive ODE solver (< 1e-4)
+- Numerov fourth-order convergence in the step; `R_max^-3` tail error of the matching
+- van der Waals universality: median `a` over short-range phases ~ Gribakin-Flambaum `a_bar`
+- `sigma_el -> 4 pi |a|^2`; p-wave Wigner threshold law `tan(delta_1) ~ k^3`
+- decoupled two-channel limit reproduces the single channel exactly
+- S-matrix unitarity (1e-16), symmetry, optical theorem, batched scan = single solves
+- Feshbach pole location and line-shape fit
+
+## Known limitations (v0.1)
+
+- Uniform radial grid; the step is set by the shortest local wavelength.
+- Matching at `R_max` uses free asymptotics, so the long-range `-C6/R^6` tail leaves an
+  error that decreases like `R_max^-3`. Always check `R_max` convergence.
+- You supply the channel basis by hand; no built-in hyperfine/Zeeman/rotor builders yet.
+- The Feshbach fit assumes a constant background and a single resonance.
+
+## Contributing
+
+Issues and PRs are welcome, especially validation cases against published results and
+MOLSCAT output. See [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## License
+
+MIT.
