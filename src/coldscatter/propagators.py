@@ -99,7 +99,11 @@ def renormalized_numerov_batch(W0: np.ndarray, D: np.ndarray, h: float) -> np.nd
 
     G = np.zeros((nB, N, N))
     for k in range(n - 1):
-        G = np.linalg.inv(mats(k)[1] - G)
+        G = np.linalg.solve(
+            mats(k)[1] - G,
+            np.broadcast_to(eye, (nB, N, N))
+        )
+
     A2, _ = mats(n - 2)
     A1, _ = mats(n - 1)
     return np.linalg.solve(A2, G @ A1)
