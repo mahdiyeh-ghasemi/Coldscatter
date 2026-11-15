@@ -81,11 +81,12 @@ Run `pytest` (or `python tests/run_all.py` without pytest). The suite checks:
 Issues and PRs are welcome, especially validation cases against published results and
 MOLSCAT output. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-## ## Authorship and AI assistance
+## Authorship and AI assistance
 
 Developed and maintained by Mahdiyeh Ghasemi, with the assistance of Claude (Anthropic) as an AI coding support tool.
 
 The scientific direction, implementation decisions, physics review, and evaluation of numerical methods are led by the project maintainer. Independent verification and validation against analytical solutions, established numerical methods, and published physical results are ongoing.
+
 ## License
 
 MIT.
