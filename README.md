@@ -81,11 +81,10 @@ Run `pytest` (or `python tests/run_all.py` without pytest). The suite checks:
 Issues and PRs are welcome, especially validation cases against published results and
 MOLSCAT output. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-## License
-
-MIT.
-
-
 ## Authorship and AI assistance
 
 Developed by Mahdiyeh Ghasemi with the assistance of Claude (Anthropic), which generated most of the initial code and tests. Physics review and validation against published data are ongoing.
+
+## License
+
+MIT.
