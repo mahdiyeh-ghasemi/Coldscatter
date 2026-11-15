@@ -7,7 +7,7 @@ name = "coldscatter"
 version = "0.1.0.dev0"
 description = "Coupled-channel scattering for ultracold atoms and molecules, in pure Python."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = ["numpy>=1.22", "scipy>=1.8"]
 keywords = ["ultracold", "scattering", "Feshbach resonance", "coupled channels", "AMO physics"]
