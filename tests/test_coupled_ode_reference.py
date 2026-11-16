@@ -97,3 +97,42 @@ def test_two_open_channel_numerov_against_dop853():
     assert errors[2] < 1e-5, errors
     assert errors[0] / errors[1] > 10.0, errors
     assert errors[1] / errors[2] > 10.0, errors
+
+
+def test_coupled_propagation_matrix_converges_against_dop853():
+    """Check convergence of the coupled Numerov propagation matrix."""
+    mu = 1.0
+    energy = 0.08
+    wall = 0.5
+    r_max = 30.0
+
+    problem = CoupledChannels(
+        mu=mu,
+        thresholds=[0.0, 0.0],
+        potentials=[
+            [
+                Gaussian(0.80, 0.5, 0.35),
+                Gaussian(0.08, 4.5, 1.0),
+            ],
+            [
+                None,
+                Gaussian(0.65, 0.5, 0.35),
+            ],
+        ],
+        ell=0,
+    )
+
+    errors = []
+
+    for h in (0.1, 0.05, 0.025):
+        grid = Grid(wall + h, r_max, h)
+        W = problem.w_matrix(grid.r, energy)
+
+        M_numerov = renormalized_numerov(W, h)
+        M_ode = ode_reference_matrix(problem, energy, grid, wall)
+
+        errors.append(np.linalg.norm(M_numerov - M_ode))
+
+    assert np.all(np.isfinite(errors))
+    assert errors[0] / errors[1] > 20.0, errors
+    assert errors[1] / errors[2] > 20.0, errors
