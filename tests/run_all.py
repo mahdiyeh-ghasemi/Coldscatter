@@ -15,7 +15,7 @@ for path in sorted(pathlib.Path(__file__).parent.glob("test_*.py")):
             try:
                 getattr(mod, name)()
                 print(f"PASS {path.stem}::{name} ({time.time() - t:.1f}s)")
-            except Exception:
+            except Exception:  # noqa: BLE001
                 failed += 1
                 print(f"FAIL {path.stem}::{name}")
                 traceback.print_exc()

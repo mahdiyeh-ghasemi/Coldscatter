@@ -2,15 +2,35 @@
 from . import units
 from .analysis import feshbach_a, fit_feshbach
 from .models import single_channel, two_channel_feshbach
-from .potentials import (Constant, Exponential, FromFunction, Gaussian, LennardJones,
-                         Potential, mean_scattering_length, vdw_length)
+from .potentials import (
+                         Constant,
+                         Exponential,
+                         FromFunction,
+                         Gaussian,
+                         LennardJones,
+                         Potential,
+                         mean_scattering_length,
+                         vdw_length,
+)
 from .solver import CoupledChannels, Grid, ScatteringResult
 
 __version__ = "0.1.0.dev0"
 
 __all__ = [
-    "units", "CoupledChannels", "Grid", "ScatteringResult", "Potential", "LennardJones",
-    "Gaussian", "Exponential", "Constant", "FromFunction", "vdw_length",
-    "mean_scattering_length", "single_channel", "two_channel_feshbach", "feshbach_a",
-    "fit_feshbach",
+                         "Constant",
+                         "CoupledChannels",
+                         "Exponential",
+                         "FromFunction",
+                         "Gaussian",
+                         "Grid",
+                         "LennardJones",
+                         "Potential",
+                         "ScatteringResult",
+                         "feshbach_a",
+                         "fit_feshbach",
+                         "mean_scattering_length",
+                         "single_channel",
+                         "two_channel_feshbach",
+                         "units",
+                         "vdw_length",
 ]

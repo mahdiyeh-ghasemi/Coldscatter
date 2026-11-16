@@ -1,7 +1,8 @@
 
 """Atomic internal structure for alkali-metal atoms."""
 
-import numpy as np 
+import numpy as np
+
 from . import units
 
 

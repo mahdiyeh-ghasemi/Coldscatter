@@ -1,8 +1,8 @@
 """Radial potentials (hartree) as functions of the separation R (bohr)."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from math import gamma, pi
-from typing import Callable
 
 import numpy as np
 
@@ -65,7 +65,7 @@ class LennardJones(Potential):
         self.c6, self.c12 = float(c6), float(c12)
 
     @classmethod
-    def from_depth(cls, depth: float, r_min: float) -> "LennardJones":
+    def from_depth(cls, depth: float, r_min: float) -> LennardJones:
         """Build from well depth ``D`` and equilibrium distance ``r_min``."""
         return cls(c6=2.0 * depth * r_min**6, c12=depth * r_min**12)
 

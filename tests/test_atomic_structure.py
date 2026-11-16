@@ -219,9 +219,9 @@ def test_rb87_hyperfine_basis_blocks():
 def test_rb87_hamiltonian_block_extraction():
     """Check extraction and spectra of independent M_F Hamiltonian blocks."""
     from coldscatter.atomic import (
-        hyperfine_hamiltonian,
-        hyperfine_basis_blocks,
         extract_hamiltonian_blocks,
+        hyperfine_basis_blocks,
+        hyperfine_hamiltonian,
     )
 
     I = 1.5

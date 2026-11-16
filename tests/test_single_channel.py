@@ -1,10 +1,10 @@
 import warnings
 
 import numpy as np
+from helpers import C6, MU, lj_for_rm, ode_reference_scalar
 
 import coldscatter as cs
 from coldscatter import units as u
-from helpers import MU, C6, lj_for_rm, ode_reference_scalar
 
 E_COLD = u.from_kelvin(1e-7)
 
