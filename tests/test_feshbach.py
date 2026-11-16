@@ -1,8 +1,9 @@
 import numpy as np
+from helpers import C6, DMU, MU, feshbach_model, lj_for_rm
 
 import coldscatter as cs
 from coldscatter import units as u
-from helpers import MU, C6, DMU, feshbach_model, lj_for_rm
+from coldscatter.asymptotics import scattering_length_from_s
 
 E_COLD = u.from_kelvin(1e-7)
 GRID = cs.Grid(7.0, 800.0, 0.02)
@@ -44,7 +45,7 @@ def test_resonance_pole_and_fit():
     ar = a.real
     jump = int(np.argmax(np.abs(np.diff(ar))))
     assert ar[jump] > 0 > ar[jump + 1]                               # a -> +inf, then -inf
-    a_bg, B0, delta = cs.fit_feshbach(B, ar)
+    _a_bg, B0, _delta = cs.fit_feshbach(B, ar)
     assert abs(B0 - 0.5 * (B[jump] + B[jump + 1])) < 0.15
 
 
@@ -61,3 +62,23 @@ def test_fit_recovers_synthetic_resonance():
     a = cs.feshbach_a(B, 100.0, 0.013, 1.7)
     a_bg, B0, delta = cs.fit_feshbach(B, a)
     assert np.allclose([a_bg, B0, delta], [100.0, 0.013, 1.7], rtol=1e-5, atol=1e-5)
+
+
+def test_scattering_length_from_s_has_no_branch_cut():
+    k = 2.0e-4
+    for delta in (-1.5, -0.5, 0.3, 1.4, 1.5700):
+        s = np.exp(2j * delta)
+        assert np.isclose(scattering_length_from_s(s, k).real, -np.tan(delta) / k, rtol=1e-9)
+    big = scattering_length_from_s(np.exp(2j * (np.pi / 2 - 1e-4)), k)
+    assert abs(big) > 100 * np.pi / (2 * k)      # not capped at pi/(2k)
+
+
+def test_a_exceeds_branch_cap_near_feshbach_pole():
+    prob = feshbach_model()
+    B = np.linspace(22.0, 44.0, 221)
+    ar = prob.scan_field(B, E_COLD, GRID).real
+    j = int(np.argmax(np.abs(np.diff(ar))))
+    fine = np.linspace(B[j], B[j + 1], 2001)
+    a_fine = prob.scan_field(fine, E_COLD, GRID).real
+    k = np.sqrt(2.0 * MU * E_COLD)
+    assert np.abs(a_fine).max() > 1.01 * np.pi / (2.0 * k)

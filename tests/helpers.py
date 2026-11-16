@@ -4,7 +4,7 @@ from scipy.integrate import solve_ivp
 
 import coldscatter as cs
 from coldscatter import units as u
-from coldscatter.asymptotics import match_k_matrix, s_from_k
+from coldscatter.asymptotics import match_k_matrix
 
 MU = u.reduced_mass(87.0, 87.0)   # Rb-87-like
 C6 = 4700.0                       # a.u.
@@ -29,7 +29,7 @@ def ode_reference_scalar(potential, mu, energy, grid):
                     t_eval=[r[-2], r[-1]], method="DOP853", rtol=1e-12, atol=1e-200)
     M = np.array([[sol.y[0, 0] / sol.y[0, 1]]])
     K, _, k, _ = match_k_matrix(M, r[-2], r[-1], np.array([2.0 * mu * energy]), [0])
-    return (1j * np.log(s_from_k(K)[0, 0]) / (2.0 * k[0])).real
+    return float(-K[0, 0] / k[0])
 
 
 def feshbach_model(coupling=2e-4):

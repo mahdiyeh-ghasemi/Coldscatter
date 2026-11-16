@@ -84,3 +84,15 @@ def match_k_matrix(M: np.ndarray, r1: float, r2: float, k2: np.ndarray, ell):
 def s_from_k(K: np.ndarray) -> np.ndarray:
     eye = np.eye(K.shape[0])
     return (eye + 1j * K) @ np.linalg.inv(eye - 1j * K)
+
+
+def scattering_length_from_s(s_ii, k: float) -> complex:
+    """Energy-dependent s-wave scattering length, free of branch cuts.
+
+    a(k) = (1 - S) / (i k (1 + S)).  For one open channel S = exp(2 i delta)
+    this equals -tan(delta)/k and diverges correctly at a resonance
+    (delta = pi/2), unlike i log(S)/(2k), whose principal branch saturates at
+    |a| = pi/(2k).  For k a -> 0 it reduces to a = alpha - i beta.
+    """
+    s = np.complex128(s_ii)
+    return complex(np.divide(1.0 - s, 1j * k * (1.0 + s)))

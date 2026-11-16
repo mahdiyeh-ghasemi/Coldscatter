@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Callable, Sequence
 
 import numpy as np
 
-from .asymptotics import match_k_matrix, s_from_k
+from .asymptotics import match_k_matrix, s_from_k, scattering_length_from_s
 from .potentials import as_potential
 from .propagators import renormalized_numerov, renormalized_numerov_batch
 
@@ -32,7 +32,7 @@ class Grid:
 
     @property
     def n_points(self) -> int:
-        return int(round((self.r_max - self.r_min) / self.step)) + 1
+        return round((self.r_max - self.r_min) / self.step) + 1
 
     @property
     def r(self) -> np.ndarray:
@@ -79,7 +79,7 @@ class ScatteringResult:
         if self.ell[self.entrance] != 0:
             raise ValueError("scattering length is defined for s-wave entrance channels")
         k = self.k_entrance
-        return complex(1j * np.log(self.s(self.entrance, self.entrance)) / (2.0 * k))
+        return scattering_length_from_s(self.s(self.entrance, self.entrance), k)
 
     def cross_sections(self) -> dict:
         r"""Partial-wave cross sections in bohr^2 (distinguishable particles), with
