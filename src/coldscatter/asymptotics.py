@@ -69,9 +69,14 @@ def match_k_matrix(M: np.ndarray, r1: float, r2: float, k2: np.ndarray, ell):
     Dc2 = np.zeros((N, n_closed))
     for c, i in enumerate(closed_idx):
         kappa, l = np.sqrt(-k2[i]), int(ell[i])
-        x1, x2 = kappa * r1, kappa * r2
-        Dc2[i, c] = _decaying_scaled(l, x2)
-        Dc1[i, c] = _decaying_scaled(l, x1) * np.exp(x2 - x1)
+        Dc2[i, c] = 1.0
+        if kappa == 0.0:
+            Dc1[i, c] = (r2 / r1) ** l
+        else:
+            x1, x2 = kappa * r1, kappa * r2
+            d1 = _decaying_scaled(l, x1)
+            d2 = _decaying_scaled(l, x2)
+            Dc1[i, c] = (d1 / d2) * np.exp(x2 - x1)
 
     lhs = np.hstack([M @ Go2 - Go1, M @ Dc2 - Dc1])
     rhs = Fo1 - M @ Fo2
