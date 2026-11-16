@@ -75,3 +75,30 @@ def test_free_f_wave_propagation_matches_exact_solution():
     assert errors[0] / errors[1] > 25.0
     assert errors[1] / errors[2] > 25.0
     assert errors[-1] < 1e-12
+
+
+def test_matrix_propagator_matches_independent_scalar_channels():
+    """Check uncoupled matrix propagation against scalar propagation."""
+    h = 0.0125
+    n_points = 200
+    r = np.arange(n_points) * h
+
+    W = np.zeros((n_points, 2, 2))
+    W[:, 0, 0] = 0.02 + 0.0001 * r**2
+    W[:, 1, 1] = 0.04 + 0.0002 * r**2
+
+    M_matrix = renormalized_numerov(W, h)
+
+    for channel in range(2):
+        W_scalar = W[:, channel, channel][:, None, None]
+        M_scalar = renormalized_numerov(W_scalar, h)
+
+        assert np.allclose(
+            M_matrix[channel, channel],
+            M_scalar[0, 0],
+            rtol=1e-13,
+            atol=1e-14,
+        )
+
+    assert abs(M_matrix[0, 1]) < 1e-14
+    assert abs(M_matrix[1, 0]) < 1e-14
