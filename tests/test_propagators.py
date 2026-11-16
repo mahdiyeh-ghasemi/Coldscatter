@@ -39,3 +39,39 @@ def test_batch_propagator_matches_individual_propagations():
             rtol=1e-11,
             atol=1e-12,
         )
+
+def test_free_f_wave_propagation_matches_exact_solution():
+    """Check Numerov propagation against the exact free f-wave solution."""
+    from scipy.special import spherical_jn, spherical_yn
+
+    ell = 3
+    k = 0.3
+    r_min = 1.0
+    r_max = 20.0
+    errors = []
+
+    for h in (0.1, 0.05, 0.025):
+        n_points = round((r_max - r_min) / h) + 1
+        r = r_min + h * np.arange(n_points)
+
+        W = (ell * (ell + 1) / r**2 - k**2)[:, None, None]
+        M_numerov = renormalized_numerov(W, h)[0, 0]
+
+        r_wall = r_min - h
+        x_wall = k * r_wall
+
+        def f(x):
+            return x * spherical_jn(ell, x)
+
+        def g(x):
+            return x * spherical_yn(ell, x)
+
+        def exact_solution(x):
+            return f(x) * g(x_wall) - g(x) * f(x_wall)
+
+        M_exact = exact_solution(k * r[-2]) / exact_solution(k * r[-1])
+        errors.append(abs(M_numerov - M_exact))
+
+    assert errors[0] / errors[1] > 25.0
+    assert errors[1] / errors[2] > 25.0
+    assert errors[-1] < 1e-12
