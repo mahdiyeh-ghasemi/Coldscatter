@@ -73,7 +73,7 @@ Run `pytest` (or `python tests/run_all.py` without pytest). The suite checks:
 - Uniform radial grid; the step is set by the shortest local wavelength.
 - Matching at `R_max` uses free asymptotics, so the long-range `-C6/R^6` tail leaves an
   error that decreases like `R_max^-3`. Always check `R_max` convergence.
-- You supply the channel basis by hand; no built-in hyperfine/Zeeman/rotor builders yet.
+- You supply the channel basis by hand: `coldscatter.atomic` builds the single-atom hyperfine + Zeeman Hamiltonian only; there is no two-atom basis, singlet/triplet projector or rotor builder yet. `scattering_length()` returns the energy-dependent a(k) = -tan(delta)/k, so use a collision energy with k|a| << 1 for the zero-energy value.
 - The Feshbach fit assumes a constant background and a single resonance.
 
 ## Contributing

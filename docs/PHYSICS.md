@@ -37,7 +37,10 @@ Solving for `b` (and the closed-channel amplitudes `d`) with `a = 1` gives `K = 
 
 ## Observables
 
-- Complex scattering length (s wave): `S_ii = exp(-2 i k a)`, `a = alpha - i beta`;
+- Energy-dependent s-wave scattering length, free of branch cuts:
+  `a(k) = (1 - S_ii) / (i k (1 + S_ii))`, which equals `-tan(delta)/k` for one open channel and
+  diverges at a resonance (the older `i log(S)/(2k)` saturates at `|a| = pi/(2k)`).
+  For `k|a| << 1` it reduces to the zero-energy `a = alpha - i beta` of `S_ii = exp(-2 i k a)`;
   `beta >= 0` means inelastic loss (Hutson, New J. Phys. 9, 152 (2007)).
 - Cross sections (distinguishable particles, one partial wave, `pref = (2l+1) pi / k^2`):
   `sigma_el = pref |1 - S_ii|^2`, `sigma_inel = pref sum_{j != i} |S_ji|^2`,
