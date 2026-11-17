@@ -92,13 +92,13 @@ def _ode_fundamental(problem, energy, wall, r_match):
     return psi, dpsi
 
 
-def test_open_closed_coupled_matching_against_derivative_reference():
-    """Compare Numerov matching with an independent ODE derivative match."""
+
+def test_open_closed_coupled_matching_converges_against_derivative_reference():
+    """Check fourth-order convergence of open-channel K for an open-closed pair."""
     mu = 1.0
     energy = 0.08
     wall = 0.5
     r_max = 24.0
-    h = 0.025
 
     problem = CoupledChannels(
         mu=mu,
@@ -110,22 +110,38 @@ def test_open_closed_coupled_matching_against_derivative_reference():
         ell=0,
     )
 
-    grid = Grid(wall + h, r_max, h)
     k2 = 2.0 * mu * (energy - problem.thresholds(0.0))
-    M = renormalized_numerov(problem.w_matrix(grid.r, energy), h)
 
-    K_matrix, open_idx, _, asymmetry = match_k_matrix(
-        M, grid.r[-2], grid.r[-1], k2, problem.ell
-    )
-
-    # The coupling is Gaussian and negligible at this matching radius.
+    # Independent reference, computed once.
     psi, dpsi = _ode_fundamental(problem, energy, wall, r_max)
-    K_reference = _derivative_match_k(
+    k_reference = _derivative_match_k(
         psi, dpsi, r_max, k2, problem.ell
     )
 
-    assert np.array_equal(open_idx, [0])
-    assert np.isfinite(K_matrix[0, 0])
-    assert np.isfinite(K_reference)
-    assert abs(K_matrix[0, 0] - K_reference) < 2e-5
-    assert asymmetry < 1e-8
+    errors = []
+
+    for h in (0.1, 0.05, 0.025):
+        grid = Grid(wall + h, r_max, h)
+        W = problem.w_matrix(grid.r, energy)
+        M = renormalized_numerov(W, h)
+
+        K_matrix, open_idx, _, asymmetry = match_k_matrix(
+            M, grid.r[-2], grid.r[-1], k2, problem.ell
+        )
+
+        assert np.array_equal(open_idx, [0])
+        assert np.isfinite(K_matrix[0, 0])
+        assert asymmetry < 1e-8
+
+        errors.append(abs(K_matrix[0, 0] - k_reference))
+
+    assert np.all(np.isfinite(errors))
+    assert errors[0] > errors[1] > errors[2]
+
+    ratios = [
+        errors[i] / errors[i + 1]
+        for i in range(len(errors) - 1)
+    ]
+
+    assert all(ratio > 12.0 for ratio in ratios)
+    assert errors[-1] < 2e-9
