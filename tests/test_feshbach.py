@@ -82,3 +82,23 @@ def test_a_exceeds_branch_cap_near_feshbach_pole():
     a_fine = prob.scan_field(fine, E_COLD, GRID).real
     k = np.sqrt(2.0 * MU * E_COLD)
     assert np.abs(a_fine).max() > 1.01 * np.pi / (2.0 * k)
+
+def test_s_matrix_unitarity_and_symmetry_across_field_regimes():
+    """Check S-matrix properties across open- and closed-channel regimes."""
+    problem = feshbach_model()
+
+    for B in (-10.0, 0.0, 10.0, 20.0, 30.0, 40.0):
+        result = problem.solve(E_COLD, GRID, B=B)
+        S = result.S
+        n_open = len(result.open_channels)
+
+        assert n_open in (1, 2)
+        assert S.shape == (n_open, n_open)
+
+        unitarity_error = np.max(
+            np.abs(S @ S.conj().T - np.eye(n_open))
+        )
+        assert unitarity_error < 1e-10
+
+        symmetry_error = np.max(np.abs(S - S.T))
+        assert symmetry_error < 1e-10
