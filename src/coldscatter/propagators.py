@@ -22,6 +22,22 @@ from __future__ import annotations
 import numpy as np
 
 
+def _prepare_W(W, h):
+    """Validate and convert the coupling array (shared by both propagators)."""
+    if np.iscomplexobj(W):
+        raise ValueError("complex (absorbing) coupling matrices are not supported")
+    W = np.asarray(W, dtype=float)
+    if W.ndim != 3 or W.shape[1] != W.shape[2]:
+        raise ValueError("W must have shape (n, N, N)")
+    if W.shape[0] < 3:
+        raise ValueError("need at least 3 grid points")
+    if not (np.isfinite(h) and h > 0):
+        raise ValueError("step h must be finite and > 0")
+    if not np.all(np.isfinite(W)):
+        raise ValueError("W contains NaN or inf")
+    return W
+
+
 def renormalized_numerov(W: np.ndarray, h: float) -> np.ndarray:
     """Propagate from the first to the last grid point.
 
@@ -44,10 +60,8 @@ def renormalized_numerov(W: np.ndarray, h: float) -> np.ndarray:
     i.e. a hard wall; place ``R_min`` deep inside the classically forbidden
     region so that the result is independent of it.
     """
-    W = np.asarray(W, dtype=float)
+    W = _prepare_W(W, h)
     n, N, _ = W.shape
-    if n < 3:
-        raise ValueError("need at least 3 grid points")
     h2 = h * h
 
     if N == 1:  # fast scalar path
@@ -83,9 +97,14 @@ def renormalized_numerov_batch(W0: np.ndarray, D: np.ndarray, h: float) -> np.nd
     -------
     M : (nB, N, N)   same meaning as in :func:`renormalized_numerov`.
     """
-    W0 = np.asarray(W0, dtype=float)
+    W0 = _prepare_W(W0, h)
+    if np.iscomplexobj(D):
+        raise ValueError("complex field offsets are not supported")
     D = np.asarray(D, dtype=float)
     n, N, _ = W0.shape
+    if (D.ndim != 2 or D.shape[0] < 1 or D.shape[1] != N
+            or not np.all(np.isfinite(D))):
+        raise ValueError("D must be a non-empty, finite array of shape (nB, N)")
     nB = D.shape[0]
     h2 = h * h
     eye = np.eye(N)

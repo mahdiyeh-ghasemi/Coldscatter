@@ -25,10 +25,18 @@ class Grid:
     step: float
 
     def __post_init__(self):
+        if not all(np.isfinite(v) for v in (self.r_min, self.r_max, self.step)):
+            raise ValueError("r_min, r_max and step must be finite numbers")
+        if self.r_min <= 0:
+            raise ValueError("r_min must be > 0 (bohr)")
         if self.step <= 0 or self.r_max <= self.r_min:
             raise ValueError("need step > 0 and r_max > r_min")
         if self.n_points < 4:
             raise ValueError("grid too coarse (fewer than 4 points)")
+        n_exact = (self.r_max - self.r_min) / self.step
+        if abs(n_exact - round(n_exact)) > 1e-6:
+            warnings.warn("(r_max - r_min) is not a multiple of step: the grid ends at "
+                          f"r = {self.r[-1]:.6g}, not at r_max.", UserWarning, stacklevel=3)
 
     @property
     def n_points(self) -> int:
@@ -123,10 +131,21 @@ class CoupledChannels:
     def __init__(self, mu: float, thresholds, potentials: Sequence[Sequence], ell=0,
                  names: Sequence[str] | None = None):
         self.mu = float(mu)
+        if not (np.isfinite(self.mu) and self.mu > 0):
+            raise ValueError("mu must be a finite number > 0 (atomic units)")
         self.n = len(potentials)
+        if self.n < 1:
+            raise ValueError("need at least one channel")
         for row in potentials:
             if len(row) != self.n:
                 raise ValueError("potentials must be a square N x N nested list")
+        for i in range(self.n):
+            for j in range(i):
+                if potentials[i][j] is not None:
+                    raise ValueError(
+                        f"potentials[{i}][{j}] is in the lower triangle. "
+                        "Only the upper triangle is accepted; move this coupling "
+                        f"to potentials[{j}][{i}].")
         self._pots = [[None if potentials[i][j] is None or j < i else as_potential(potentials[i][j])
                        for j in range(self.n)] for i in range(self.n)]
         if callable(thresholds):
@@ -134,13 +153,24 @@ class CoupledChannels:
         else:
             t = np.asarray(thresholds, dtype=float)
             self._thr = lambda B, _t=t: _t
-        self.ell = np.broadcast_to(np.asarray(ell, dtype=int), (self.n,)).copy()
+        ell_arr = np.asarray(ell, dtype=float)
+        if (not np.all(np.isfinite(ell_arr)) or np.any(ell_arr < 0)
+                or np.any(ell_arr != np.round(ell_arr))):
+            raise ValueError("ell must be non-negative integers")
+        try:
+            self.ell = np.broadcast_to(ell_arr.astype(int), (self.n,)).copy()
+        except ValueError:
+            raise ValueError("ell must be a scalar or have one entry per channel") from None
         self.names = list(names) if names is not None else [f"ch{i}" for i in range(self.n)]
-        if len(self.thresholds(0.0)) != self.n:
-            raise ValueError("thresholds length must match number of channels")
+        if len(self.names) != self.n:
+            raise ValueError("names must have one entry per channel")
+        self.thresholds(0.0)  # validates shape and finiteness
 
     def thresholds(self, B: float = 0.0) -> np.ndarray:
-        return np.asarray(self._thr(B), dtype=float)
+        thr = np.asarray(self._thr(B), dtype=float)
+        if thr.shape != (self.n,) or not np.all(np.isfinite(thr)):
+            raise ValueError("thresholds must be a finite array with one entry per channel")
+        return thr
 
     def potential_matrix(self, r: np.ndarray) -> np.ndarray:
         V = np.zeros((len(r), self.n, self.n))
@@ -166,6 +196,13 @@ class CoupledChannels:
         return ScatteringResult(self.mu, float(E), float(B), int(entrance), k2, self.ell.copy(),
                                 open_idx, k_open, K, s_from_k(K), asym)
 
+    def _check_run(self, collision_energy, entrance):
+        if not (np.isfinite(collision_energy) and collision_energy > 0):
+            raise ValueError("collision_energy must be finite and > 0 (hartree)")
+        ok = isinstance(entrance, (int, np.integer)) and not isinstance(entrance, bool)
+        if not (ok and 0 <= entrance < self.n):
+            raise ValueError(f"entrance must be an integer in [0, {self.n - 1}]")
+
     def solve(self, collision_energy: float, grid: Grid, B: float = 0.0,
               entrance: int = 0) -> ScatteringResult:
         """Solve at fixed field ``B`` (gauss).
@@ -173,8 +210,9 @@ class CoupledChannels:
         ``collision_energy`` (hartree) is measured from the threshold of the
         ``entrance`` channel.
         """
-        if collision_energy <= 0:
-            raise ValueError("collision_energy must be > 0 (hartree)")
+        self._check_run(collision_energy, entrance)
+        if not np.isfinite(B):
+            raise ValueError("B must be finite (gauss)")
         thr = self.thresholds(B)
         E = thr[entrance] + collision_energy
         r = grid.r
@@ -188,9 +226,10 @@ class CoupledChannels:
     def scan(self, fields, collision_energy: float, grid: Grid,
              entrance: int = 0) -> list[ScatteringResult]:
         """Solve for many fields (gauss) in one batched sweep over the grid."""
-        if collision_energy <= 0:
-            raise ValueError("collision_energy must be > 0 (hartree)")
+        self._check_run(collision_energy, entrance)
         fields = np.atleast_1d(np.asarray(fields, dtype=float))
+        if fields.ndim != 1 or fields.size == 0 or not np.all(np.isfinite(fields)):
+            raise ValueError("fields must be a non-empty 1-D array of finite values (gauss)")
         r = grid.r
         thr = np.array([self.thresholds(B) for B in fields])            # (nB, N)
         E = thr[:, entrance] + collision_energy                         # (nB,)

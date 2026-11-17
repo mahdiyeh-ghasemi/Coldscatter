@@ -80,7 +80,11 @@ def match_k_matrix(M: np.ndarray, r1: float, r2: float, k2: np.ndarray, ell):
 
     lhs = np.hstack([M @ Go2 - Go1, M @ Dc2 - Dc1])
     rhs = Fo1 - M @ Fo2
-    sol = np.linalg.solve(lhs, rhs)
+    try:
+        sol = np.linalg.solve(lhs, rhs)
+    except np.linalg.LinAlgError as exc:
+        raise RuntimeError("asymptotic matching matrix is singular; "
+                           "check the grid, the energy and the channel setup") from exc
     K = sol[:n_open, :]
     asym = float(np.max(np.abs(K - K.T)) / max(np.max(np.abs(K)), 1e-300))
     return 0.5 * (K + K.T), open_idx, k_open, asym

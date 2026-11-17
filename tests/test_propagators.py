@@ -102,3 +102,22 @@ def test_matrix_propagator_matches_independent_scalar_channels():
 
     assert abs(M_matrix[0, 1]) < 1e-14
     assert abs(M_matrix[1, 0]) < 1e-14
+
+
+def test_batch_propagator_rejects_empty_offsets():
+    W0 = np.zeros((3, 1, 1))
+    with np.testing.assert_raises(ValueError):
+        renormalized_numerov_batch(W0, np.empty((0, 1)), 0.1)
+
+
+def test_batch_propagator_rejects_complex_offsets():
+    W0 = np.zeros((3, 1, 1))
+    with np.testing.assert_raises(ValueError):
+        renormalized_numerov_batch(W0, np.array([[0.1 + 0.2j]]), 0.1)
+
+
+def test_batch_propagator_rejects_nonfinite_offsets():
+    W0 = np.zeros((3, 1, 1))
+    for value in (np.nan, np.inf, -np.inf):
+        with np.testing.assert_raises(ValueError):
+            renormalized_numerov_batch(W0, np.array([[value]]), 0.1)
