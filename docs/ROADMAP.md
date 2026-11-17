@@ -1,9 +1,9 @@
 # Roadmap
 
-**v0.1 (this release)** - validated single/multi-channel core, batched field scans, fit.
+**v0.1 (this release)** - internally tested single/multi-channel core, batched field scans, and resonance fitting. Analytical and independent numerical checks are included; external realistic-system benchmarking remains open.
 
 **v0.2 - correctness and reach**
-- Cross-check against MOLSCAT on published Rb/Cs/Na-K benchmarks (publish the comparison tables).
+- Cross-check complete scattering observables against MOLSCAT and published Rb/Cs/Na-K benchmarks; document model definitions, units, convergence settings, and comparison tables.
 - Adaptive-step log-derivative propagator (Johnson / Manolopoulos) to cut cost on long ranges.
 - Long-range matching to the `-C6/R^6` solutions (removes the `R_max^-3` error).
 - Bound states and resonance positions (BOUND/FIELD-like); resonance width and `a_bg` extraction.

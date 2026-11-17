@@ -7,11 +7,11 @@ resonances for two colliding particles, from a set of radial channels you define
 The goal is a community reference tool in the spirit of QuTiP and Pulser:
 a small, well-documented API on top of a numerically validated core.
 
-> **Status: v0.1 (pre-alpha).** The core solver is validated against analytic and
-> independent numerical results (see [Validation](#validation)). It has **not yet** been
-> cross-checked against MOLSCAT on realistic atomic/molecular Hamiltonians; that is the
-> first item on the [roadmap](docs/ROADMAP.md).
-
+> **Status: v0.1 (pre-alpha).** The core solver has passed internal tests against
+> analytical solutions and independent numerical integration references (see
+> [Validation](#validation)). It has **not yet** been benchmarked against MOLSCAT
+> or experimental scattering data for realistic atomic/molecular systems. External
+> benchmarking is the first item on the [roadmap](docs/ROADMAP.md).
 ## Quick start
 
 ```bash
@@ -57,7 +57,7 @@ Conventions and equations: [docs/PHYSICS.md](docs/PHYSICS.md).
 
 ## Validation
 
-Run `pytest` (or `python tests/run_all.py` without pytest). The suite checks:
+Run `pytest` (or `python tests/run_all.py` without pytest). The internal test suite checks:
 
 - square well against the analytic scattering length (relative error ~1e-6)
 - Lennard-Jones against an independent adaptive ODE solver (< 1e-4)
@@ -65,8 +65,18 @@ Run `pytest` (or `python tests/run_all.py` without pytest). The suite checks:
 - van der Waals universality: median `a` over short-range phases ~ Gribakin-Flambaum `a_bar`
 - `sigma_el -> 4 pi |a|^2`; p-wave Wigner threshold law `tan(delta_1) ~ k^3`
 - decoupled two-channel limit reproduces the single channel exactly
+- coupled, open-closed, and propagation-matrix results against independent DOP853 ODE integration
+- asymptotic matching and open/closed-channel derivative matching reference tests
+- d- and f-wave threshold behaviour against independent numerical references
 - S-matrix unitarity (1e-16), symmetry, optical theorem, batched scan = single solves
 - Feshbach pole location and line-shape fit
+- input validation for grids, potentials, channel definitions, and propagators
+
+The Rb-87 literature tests currently check van der Waals length, energy, and
+mean-scattering-length scales derived from published constants. They do not
+constitute a full scattering-observable benchmark against experiment or MOLSCAT.
+The DOP853 tests provide independent integration references for selected model
+problems, not external validation of a realistic atomic or molecular system.
 
 ## Known limitations (v0.1)
 

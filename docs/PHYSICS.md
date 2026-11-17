@@ -50,6 +50,19 @@ Solving for `b` (and the closed-channel amplitudes `d`) with `a = 1` gives `K = 
   `a_bar = 4 pi / Gamma(1/4)^2 R_vdW` (Gribakin and Flambaum, PRA 48, 546 (1993)).
 - Resonance line shape `a(B) = a_bg (1 - Delta/(B - B0))` (Chin et al., RMP 82, 1225 (2010)).
 
+## Validation scope
+
+The current test suite checks selected analytical limits, numerical convergence,
+and independent integration references. In particular, coupled-channel propagation
+is compared with DOP853 solutions for model potentials, while separate tests check
+asymptotic matching and open/closed-channel matching.
+
+The Rb-87 literature checks verify van der Waals scales calculated from published
+long-range constants. They do not yet compare a complete scattering matrix,
+scattering length, or resonance position with experimental data or MOLSCAT.
+The model-potential tests should therefore be understood as internal numerical
+verification, not as an external benchmark of realistic collision physics.
+
 ## References
 
 - B. R. Johnson, J. Chem. Phys. 67, 4086 (1977); J. Comput. Phys. 13, 445 (1973).
