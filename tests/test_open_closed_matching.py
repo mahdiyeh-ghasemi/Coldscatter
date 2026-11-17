@@ -5,7 +5,7 @@ from scipy.integrate import solve_ivp
 from scipy.special import spherical_jn, spherical_yn
 
 from coldscatter.asymptotics import match_k_matrix
-from coldscatter.potentials import Gaussian
+from coldscatter.potentials import Gaussian, LennardJones
 from coldscatter.propagators import renormalized_numerov
 from coldscatter.solver import CoupledChannels, Grid
 
@@ -145,3 +145,33 @@ def test_open_closed_coupled_matching_converges_against_derivative_reference():
 
     assert all(ratio > 12.0 for ratio in ratios)
     assert errors[-1] < 2e-9
+def test_open_channel_s_matrix_is_unitary_with_closed_channel():
+    """A closed channel must not cause loss of open-channel flux."""
+    lj = LennardJones.from_depth(depth=0.02, r_min=2.0)
+
+    problem = CoupledChannels(
+        mu=1.0,
+        thresholds=[0.0, 0.20],
+        potentials=[
+            [lj, Gaussian(0.001, 3.0, 0.7)],
+            [None, lj],
+        ],
+        ell=0,
+    )
+
+    grid = Grid(0.6, 24.0, 0.025)
+    result = problem.solve(0.08, grid)
+
+    assert np.array_equal(result.open_channels, [0])
+    assert result.S.shape == (1, 1)
+
+    unitarity_error = np.max(
+        np.abs(result.S @ result.S.conj().T - np.eye(1))
+    )
+    assert unitarity_error < 1e-10
+
+    assert np.isclose(abs(result.s(0, 0)), 1.0, atol=1e-10)
+
+    cross_sections = result.cross_sections()
+    assert abs(cross_sections["loss"]) < 1e-9 * cross_sections["total"]
+    assert cross_sections["inelastic"] == 0.0
