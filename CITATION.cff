@@ -6,6 +6,7 @@ authors:
   - family-names: "Ghasemi"
     given-names: "Mahdiyeh"
 type: software
+date-released: "2026-11-18"
 license: MIT
 repository-code: "https://github.com/mahdiyeh-ghasemi/Coldscatter"
 keywords:
