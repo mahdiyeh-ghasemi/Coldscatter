@@ -7,5 +7,5 @@ dist/
 .ipynb_checkpoints/
 .coverage
 htmlcov/
-.coverage
-htmlcov/
+.coldscatter_monitor_state.json
+.coldscatter_monitor_state.*.tmp

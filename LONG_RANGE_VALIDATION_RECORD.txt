@@ -1,0 +1,71 @@
+Coldscatter Long-range final targeted check
+Tue Nov 17 21:39:36 UTC 2026
+
+Latest full-suite baseline: 133 passed
+Latest long-range baseline: 44 passed
+New targeted boolean/Wronskian/zero-tail tests:
+.....                                                                    [100%]
+5 passed, 40 deselected in 7.79s
+
+Diff check:
+
+Worktree:
+ M README.md
+ M docs/PHYSICS.md
+ M src/coldscatter/__init__.py
+ M src/coldscatter/asymptotics.py
+ M src/coldscatter/solver.py
+?? LONG_RANGE_VALIDATION_RECORD.txt
+?? MANUAL.md
+?? examples/03_long_range_matching.py
+?? src/coldscatter/long_range.py
+?? tests/test_long_range_matching.py
+
+Final documentation correction:
+Tue Nov 17 21:41:12 UTC 2026
+90-DOP853. Open-channel reference solutions are initialized with the
+91-free Riccati-Bessel pair at ``r_far`` and propagated as a pair of
+92:independent solutions. Their Wronskian normalization is verified in
+93-regression tests against the free-wave value ``W(F,G) = -1``.
+94-
+
+Targeted tests: 5 passed
+Previous full suite: 133 passed
+Previous long-range suite: 44 passed
+Diff check:
+Coldscatter Long-range final verification
+Tue Nov 17 21:45:18 UTC 2026
+Long-range tests, diff check, compileall, example exit code: 0
+
+Latest recorded full suite: 133 passed
+Latest recorded targeted tests: 5 passed
+
+Worktree:
+ M README.md
+ M docs/PHYSICS.md
+ M src/coldscatter/__init__.py
+ M src/coldscatter/asymptotics.py
+ M src/coldscatter/solver.py
+?? LONG_RANGE_VALIDATION_RECORD.txt
+?? MANUAL.md
+?? examples/03_long_range_matching.py
+?? src/coldscatter/long_range.py
+?? tests/test_long_range_matching.py
+
+Final review update — 18 Nov 2026
+Latest complete long-range test run: 50 passed.
+Final review added direct validation of closed-channel ell and matching radii.
+Independent MOLSCAT comparison and experimental validation remain outstanding.
+
+Final integrated verification — 18 Nov 2026
+Full test suite: 149 passed in 246.00 s.
+Python compileall: passed for src, tools, examples, and tests.
+git diff --check: passed.
+Long-range matching tests include open-channel Wronskian checks,
+closed-channel ratio comparisons across angular momenta and thresholds,
+matching-radius checks, and zero-tail regression.
+README Feshbach scan example corrected to define its field array and
+produce the scattering-length scan. Optional fitting requires a
+user-selected narrow window around one isolated resonance.
+
+External MOLSCAT benchmarking and experimental validation remain outstanding.

@@ -9,6 +9,7 @@ import numpy as np
 
 from .asymptotics import match_k_matrix, s_from_k, scattering_length_from_s
 from .potentials import as_potential
+from .long_range import LongRange
 from .propagators import renormalized_numerov, renormalized_numerov_batch
 
 
@@ -126,10 +127,15 @@ class CoupledChannels:
         numbers or ``None``.  Only the upper triangle (``i <= j``) is read; the
         matrix is symmetrised automatically.
     ell : partial wave per channel (int or sequence); default 0.
+    long_range : LongRange, sequence of LongRange/None, or None.
+        Optional diagonal asymptotic reference tail for matching. A single
+        LongRange object is broadcast to all channels. A sequence must have
+        one entry per channel. None retains free-reference matching.
+        The reference tail is not added to the physical potential.
     """
 
     def __init__(self, mu: float, thresholds, potentials: Sequence[Sequence], ell=0,
-                 names: Sequence[str] | None = None):
+                 names: Sequence[str] | None = None, long_range=None):
         self.mu = float(mu)
         if not (np.isfinite(self.mu) and self.mu > 0):
             raise ValueError("mu must be a finite number > 0 (atomic units)")
@@ -153,6 +159,9 @@ class CoupledChannels:
         else:
             t = np.asarray(thresholds, dtype=float)
             self._thr = lambda B, _t=t: _t
+        raw_ell = np.asarray(ell, dtype=object)
+        if any(isinstance(value, (bool, np.bool_)) for value in raw_ell.flat):
+            raise ValueError("ell must contain non-negative integers, not booleans")
         ell_arr = np.asarray(ell, dtype=float)
         if (not np.all(np.isfinite(ell_arr)) or np.any(ell_arr < 0)
                 or np.any(ell_arr != np.round(ell_arr))):
@@ -161,6 +170,17 @@ class CoupledChannels:
             self.ell = np.broadcast_to(ell_arr.astype(int), (self.n,)).copy()
         except ValueError:
             raise ValueError("ell must be a scalar or have one entry per channel") from None
+        if long_range is None:
+            self.long_range = (None,) * self.n
+        elif isinstance(long_range, LongRange):
+            self.long_range = (long_range,) * self.n
+        else:
+            self.long_range = tuple(long_range)
+            if len(self.long_range) != self.n:
+                raise ValueError("long_range must have one entry per channel")
+            if any(t is not None and not isinstance(t, LongRange)
+                   for t in self.long_range):
+                raise TypeError("long_range entries must be LongRange or None")
         self.names = list(names) if names is not None else [f"ch{i}" for i in range(self.n)]
         if len(self.names) != self.n:
             raise ValueError("names must have one entry per channel")
@@ -192,7 +212,10 @@ class CoupledChannels:
 
     def _result(self, M, E, thr, B, entrance, r) -> ScatteringResult:
         k2 = 2.0 * self.mu * (E - thr)
-        K, open_idx, k_open, asym = match_k_matrix(M, r[-2], r[-1], k2, self.ell)
+        K, open_idx, k_open, asym = match_k_matrix(
+            M, r[-2], r[-1], k2, self.ell, mu=self.mu,
+            long_range=self.long_range
+        )
         return ScatteringResult(self.mu, float(E), float(B), int(entrance), k2, self.ell.copy(),
                                 open_idx, k_open, K, s_from_k(K), asym)
 

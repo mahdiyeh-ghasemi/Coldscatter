@@ -68,3 +68,71 @@ verification, not as an external benchmark of realistic collision physics.
 - B. R. Johnson, J. Chem. Phys. 67, 4086 (1977); J. Comput. Phys. 13, 445 (1973).
 - J. M. Hutson and C. R. Le Sueur, Comput. Phys. Commun. 241, 9 (2019) (MOLSCAT).
 - C. Chin, R. Grimm, P. Julienne, E. Tiesinga, Rev. Mod. Phys. 82, 1225 (2010).
+
+## Long-range reference matching
+
+By default, matching uses free Riccati-Bessel functions in open channels
+and decaying modified spherical Bessel functions in closed channels.
+For interactions with a known diagonal asymptotic tail, a channel may
+instead use the reference potential
+
+    V_ref(R) = -sum_n C_n / R^n.
+
+The public ``LongRange`` class represents this tail. For example,
+
+    tail = coldscatter.LongRange({6: 4700.0}, r_far=5000.0)
+
+uses a van der Waals ``-C6/R^6`` reference. Coefficients are in atomic
+units: ``C_n`` is in hartree * bohr**n, radii are in bohr, and energies
+are in hartree.
+
+The reference radial equation is integrated inward from ``r_far`` using
+DOP853. Open-channel reference solutions are initialized with the
+free Riccati-Bessel pair at ``r_far`` and propagated as a pair of
+independent solutions. Their Wronskian normalization is verified in
+regression tests against the free-wave value ``W(F,G) = -1``.
+
+For a closed channel, the reference wavefunction ``D(R)`` satisfies
+
+\[
+D''(R) =
+\left[
+\frac{\ell(\ell+1)}{R^2}
++ 2\mu\left(\kappa^2 + V_{\mathrm{ref}}(R)\right)
+\right]D(R),
+\]
+
+where ``kappa`` is the positive inverse decay length. At ``r_far``, the
+initial logarithmic derivative is taken from the decaying free modified
+spherical-Bessel reference for ``kappa > 0``. At the zero-energy
+threshold, its limiting value is ``-ell/r_far``.
+
+The closed-channel implementation propagates the pair ``(D, D')``
+inward and rescales it piecewise to control its numerical dynamic range.
+The accumulated scale factors are retained when evaluating the signed
+ratio ``D(r1)/D(r2)``. This permits propagation across nodes without
+the logarithmic-derivative poles that occur when ``D(R) = 0``.
+The denominator radius ``r2`` must not itself be a node.
+
+The boundary condition is initialized at a finite ``r_far``. Its
+adequacy must therefore be checked by increasing ``r_far`` and verifying
+stability of the matching quantities and final observables.
+
+Pass ``long_range`` to ``CoupledChannels``. A single ``LongRange`` object
+is broadcast to all channels; alternatively, pass a sequence containing
+one ``LongRange`` or ``None`` per channel. ``None`` selects the original
+free reference for that channel. The default ``long_range=None`` preserves
+the original matching behavior.
+
+**Important:** ``LongRange`` defines a reference function only. It is not
+added to the physical potential supplied to ``CoupledChannels``. The
+physical potential should already contain the interaction being modeled.
+For a Lennard-Jones potential, the asymptotic reference is commonly
+``LongRange({6: potential.c6})``; the repulsive ``C12/R^12`` term is not
+part of that leading asymptotic reference.
+
+This implementation supports diagonal channel tails. Off-diagonal
+long-range couplings are not included. The finite starting radius
+``r_far`` and matching radius must be checked for convergence in
+representative calculations. Increasing ``r_far`` and ``r_max`` should
+not materially change the observables at the requested precision.

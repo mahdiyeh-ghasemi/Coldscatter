@@ -13,24 +13,26 @@ from .potentials import (
                          vdw_length,
 )
 from .solver import CoupledChannels, Grid, ScatteringResult
+from .long_range import LongRange
 
 __version__ = "0.1.0.dev0"
 
 __all__ = [
-                         "Constant",
-                         "CoupledChannels",
-                         "Exponential",
-                         "FromFunction",
-                         "Gaussian",
-                         "Grid",
-                         "LennardJones",
-                         "Potential",
-                         "ScatteringResult",
-                         "feshbach_a",
-                         "fit_feshbach",
-                         "mean_scattering_length",
-                         "single_channel",
-                         "two_channel_feshbach",
-                         "units",
-                         "vdw_length",
+    "Constant",
+    "CoupledChannels",
+    "Exponential",
+    "FromFunction",
+    "Gaussian",
+    "Grid",
+    "LennardJones",
+    "LongRange",
+    "Potential",
+    "ScatteringResult",
+    "feshbach_a",
+    "fit_feshbach",
+    "mean_scattering_length",
+    "single_channel",
+    "two_channel_feshbach",
+    "units",
+    "vdw_length",
 ]
