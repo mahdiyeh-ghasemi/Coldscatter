@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use Coldscatter in your research, please cite the software and the physical methods or data sources used in your work."
 title: "Coldscatter"
-version: "0.1.0.dev0"
+version: "0.1.0"
 authors:
   - family-names: "Ghasemi"
     given-names: "Mahdiyeh"
