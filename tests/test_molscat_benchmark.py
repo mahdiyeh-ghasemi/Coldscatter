@@ -47,8 +47,7 @@ def test_near_threshold_scattering_length(point):
 
 
 def test_near_threshold_does_not_degrade_with_finer_step():
-    """Regression: with Numerov + two-point matching (<= 0.1.0) refining the
-    step to 2.5e-4 A degraded a(E=1e-6 cm^-1) to 5.5e-6 relative error."""
+    """Near threshold the result must stay converged when the step is refined."""
     case = CASES["C_near_threshold_scattering_length"]
     point = case["points"][1]
     a = mc.solve(MODEL, point["energy_cm"], 2.5e-4, case["rmax_A"]).scattering_length().real / mc.ANGSTROM
@@ -56,8 +55,7 @@ def test_near_threshold_does_not_degrade_with_finer_step():
 
 
 def test_s_matrix_converged_at_coarse_step():
-    """Regression: the step error was O(h * V(r_max)) with two-point matching;
-    the log-derivative path is converged to MOLSCAT already at h = 1e-3 A."""
+    """The default propagator is converged to MOLSCAT already at h = 1e-3 A."""
     case = CASES["A_two_open_channels"]
     S = mc.solve(MODEL, case["energy_cm"], 1e-3, case["rmax_A"]).S
     assert abs(S[1, 0] - complex(*case["S"]["21"])) < 2e-9
