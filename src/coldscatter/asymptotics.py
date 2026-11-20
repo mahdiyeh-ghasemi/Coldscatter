@@ -128,8 +128,7 @@ def _long_closed_ratio(tail, mu, ell, kappa, r1, r2):
 
     def rhs(r, state):
         d, dp = state
-        # kappa**2 = -k2 already contains the factor 2 mu (bug fixed in 0.1.1:
-        # this used to read 2 mu (kappa**2 + V), i.e. kappa**2 scaled by 2 mu).
+        # kappa**2 = -k2 already contains the factor 2 mu
         q = (
             ell * (ell + 1) / r**2
             + kappa**2
@@ -310,7 +309,7 @@ def scattering_length_from_s(s_ii, k: float) -> complex:
 
 
 # --------------------------------------------------------------------------
-# Single-radius matching of a log-derivative matrix (default since 0.1.1)
+# Single-radius matching of a log-derivative matrix (default)
 # --------------------------------------------------------------------------
 
 def _check_ell_and_tails(N, ell, long_range):
