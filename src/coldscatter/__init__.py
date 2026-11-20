@@ -2,6 +2,7 @@
 from . import atomic, units
 from .analysis import feshbach_a, fit_feshbach
 from .models import single_channel, two_channel_feshbach
+from .plotting import export_results_csv, plot_cross_sections, plot_scattering_length
 from .potentials import (
                          Constant,
                          Exponential,
@@ -36,6 +37,9 @@ __all__ = [
     "feshbach_a",
     "fit_feshbach",
     "mean_scattering_length",
+    "export_results_csv",
+    "plot_cross_sections",
+    "plot_scattering_length",
     "single_channel",
     "two_channel_feshbach",
     "units",
