@@ -353,8 +353,9 @@ Complex matrices in CSV output are represented as JSON objects with separate rea
 Coldscatter is distributed under the MIT License. If you use it in research, cite the software version using CITATION.cff and cite the underlying physical methods, published data, and external sources independently.
 
 Report the model, units, grid, channel thresholds, potential parameters, long-range coefficients, and convergence checks. Preserve applicable third-party notices when redistributing the software.
+See docs/CITATION_AND_COPYRIGHT.md and THIRD_PARTY_NOTICES.md.
 
-See docs/CITATION_AND_COPYRIGHT.md and THIRD_PARTY_NOTICES.md. Use a versioned release and archival DOI when available. Do not assume a DOI exists before one has been assigned.
+Coldscatter is archived on Zenodo (DOI: 10.5281/zenodo.24406777 for version 0.1.1). Cite the exact version used, and replace the version and DOI with those of the release you actually used.
 
 ## 15. Publication and repository activity monitoring
 
