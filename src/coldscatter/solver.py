@@ -267,7 +267,7 @@ class CoupledChannels:
         return W
 
     def _result(self, prop, E, thr, B, entrance, r, propagator) -> ScatteringResult:
-        """``prop`` is Y at r[-1] (log-derivative) or M (Numerov, legacy)."""
+        """``prop`` is Y at r[-1] (log-derivative) or M (Numerov)."""
         k2 = 2.0 * self.mu * (E - thr)
         if propagator == "log-derivative":
             K, open_idx, k_open, asym = match_k_matrix_logderiv(
@@ -329,7 +329,7 @@ class CoupledChannels:
         ``collision_energy`` (hartree) is measured from the threshold of the
         ``entrance`` channel.  ``propagator`` is ``"log-derivative"`` (default:
         Johnson propagator on the grid plus mid-points, matched at ``r_max``)
-        or ``"numerov"`` (legacy renormalized Numerov with two-point matching).
+        or ``"numerov"`` (renormalized Numerov with two-point matching).
         """
         self._check_run(collision_energy, entrance)
         _check_propagator(propagator)
