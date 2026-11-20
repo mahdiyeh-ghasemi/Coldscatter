@@ -31,12 +31,8 @@ def test_square_well_exact():
         assert abs(res.scattering_length().real - exact) / abs(exact) < 2e-6
 
 
-def test_square_well_exact_legacy_numerov():
-    """Legacy Numerov puts psi = 0 one step before r_min, i.e. at the origin here.
-
-    Only the coarser steps are checked: with two-point matching the error
-    grows again for finer steps near threshold (fixed by the default propagator).
-    """
+def test_square_well_exact_numerov():
+    """The Numerov propagator puts psi = 0 one step before r_min, i.e. at the origin here."""
     v0, r0 = 2e-6, 50.0
     k0 = np.sqrt(2 * MU * v0)
     prob = cs.single_channel(MU, cs.FromFunction(lambda r: np.where(r < r0, -v0, 0.0)))
