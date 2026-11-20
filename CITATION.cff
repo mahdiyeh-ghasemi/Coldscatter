@@ -1,12 +1,12 @@
 cff-version: 1.2.0
 message: "If you use Coldscatter in your research, please cite the software and the physical methods or data sources used in your work."
 title: "Coldscatter"
-version: "0.1.0"
+version: "0.1.1"
 authors:
   - family-names: "Ghasemi"
     given-names: "Mahdiyeh"
 type: software
-date-released: "2026-11-18"
+date-released: "2026-11-20"
 license: MIT
 repository-code: "https://github.com/mahdiyeh-ghasemi/Coldscatter"
 keywords:

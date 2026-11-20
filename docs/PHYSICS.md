@@ -15,18 +15,37 @@ Channel `i` is open if `k_i^2 = 2 mu (E - E_i) > 0`.
 
 ## Propagation
 
-Johnson's renormalized Numerov method (J. Chem. Phys. 67, 4086 (1977)) propagates the
-ratio `G_n = phi_{n-1} phi_n^{-1}` with `phi_n = (1 - h^2 W_n/12) psi_n`:
+**Default: Johnson log-derivative method** (B. R. Johnson, J. Comput. Phys.
+13, 445 (1973)), which carries `Y = psi' psi^{-1}` directly. On a sector with an even number
+of intervals of width `h` (Coldscatter uses the user grid plus its mid-points, so the
+propagation step is `step/2`):
+
+    Y_k = (1 + h Y_{k-1})^{-1} Y_{k-1} + (h/3) w_k U_k,      w_k = 4, 2, 4, ..., 4, 1
+    U_k = W_k (k even),   U_k = (1 - h^2 W_k / 6)^{-1} W_k (k odd),
+    Y_0 = Y_start + (h/3) W_0.
+
+The global error is `O(h^4)`. The hard-wall condition `psi = 0` is imposed **at** `R_min`
+(`Y_start -> infinity`). A second, coarser sector (`Grid(r_mid=..., step_long=...)`) starts
+from the `Y` at the end of the first one.
+
+**Alternative (`propagator="numerov"`): renormalized Numerov** (B. R. Johnson, J. Chem. Phys. 67,
+4086 (1977)) propagates `G_n = phi_{n-1} phi_n^{-1}` with `phi_n = (1 - h^2 W_n/12) psi_n`:
 
     G_{n+1} = ( 2 + h^2 W_n (1 - h^2 W_n/12)^{-1} - G_n )^{-1}.
 
-It is fourth-order accurate in the step `h`, and stable for closed channels because only
-bounded ratios are stored. The hard-wall boundary condition `psi = 0` is imposed one step
-before `R_min`.
+The hard wall is one step before `R_min`.
 
 ## Matching
 
-At the last two grid points, `psi(R_1) = M psi(R_2)`. Asymptotically
+**Default: single radius.** With `psi' = Y psi` at `R = r_max` and the asymptotic form below,
+
+    [Y G - G',  Y D - D'] X = F' - Y F,       K = X (open-open block),
+
+where the closed-channel functions are normalised to `D(r_max) = 1`, so `D'` is their
+logarithmic derivative.
+
+**Numerov: two points.** With Numerov, `psi(R_1) = M psi(R_2)` at the last two grid points.
+Asymptotically
 
     psi = F a + G b + D d,
 

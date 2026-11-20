@@ -25,7 +25,7 @@ that release.
 
 Until an archival DOI is available, a provisional citation is:
 
-> Ghasemi, M. (2026). *Coldscatter* (version 0.1.0.dev0) [Computer software].
+> Ghasemi, M. (2026). *Coldscatter* (version 0.1.1) [Computer software].
 > GitHub. https://github.com/mahdiyeh-ghasemi/Coldscatter
 
 Replace the version and year with those of the version actually used.

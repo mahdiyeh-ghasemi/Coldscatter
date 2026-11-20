@@ -94,23 +94,42 @@ def hyperfine_hamiltonian(
     B_gauss=0.0,
     g_J=2.002331070,
     g_I=-0.0009951414,
+    B_hf=0.0,
 ):
-    """Construct the hyperfine + Zeeman Hamiltonian.
+    r"""Construct the hyperfine + Zeeman Hamiltonian.
 
-    Basis: |m_J, m_I>
-    A_hf: Hartree
-    B_gauss: Gauss
-    g_J and g_I: dimensionless, in Bohr-magneton convention.
-    Returns: Hamiltonian in Hartree.
+    .. math::
+        H = A\,\mathbf{I}\cdot\mathbf{J}
+            + B_{hf}\frac{3(\mathbf{I}\cdot\mathbf{J})^2 + \tfrac32\mathbf{I}\cdot\mathbf{J}
+              - I(I+1)J(J+1)}{2I(2I-1)J(2J-1)}
+            + \mu_B B\,(g_J J_z + g_I I_z)
+
+    Basis: |m_J, m_I> (m_J outer).  ``A_hf`` and ``B_hf``: hartree;
+    ``B_gauss``: gauss; ``g_J``, ``g_I``: dimensionless, Bohr-magneton
+    convention (Arimondo et al., Rev. Mod. Phys. 49, 31 (1977)).
+
+    .. warning::
+       The default ``g_J`` and ``g_I`` are the **87Rb** ground-state values.
+       For other atoms pass them explicitly, or use :func:`alkali_hamiltonian`
+       with an entry of :data:`ALKALI_GROUND_STATES`.
+
+    The electric-quadrupole term ``B_hf`` only exists for ``I >= 1`` and
+    ``J >= 1`` (it is zero for alkali ground states, J = 1/2).
+    Returns: Hamiltonian in hartree.
     """
     Ix, Iy, Iz, _, _ = spin_matrices(I)
     Jx, Jy, Jz, _, _ = spin_matrices(J)
 
-    H_hf = A_hf * (
-        np.kron(Jx, Ix)
-        + np.kron(Jy, Iy)
-        + np.kron(Jz, Iz)
-    )
+    IJ = np.kron(Jx, Ix) + np.kron(Jy, Iy) + np.kron(Jz, Iz)
+    H_hf = A_hf * IJ
+
+    if B_hf != 0.0:
+        if I < 1 or J < 1:
+            raise ValueError("the quadrupole term B_hf needs I >= 1 and J >= 1")
+        dim = IJ.shape[0]
+        H_hf = H_hf + B_hf * (
+            3.0 * IJ @ IJ + 1.5 * IJ - I * (I + 1) * J * (J + 1) * np.eye(dim)
+        ) / (2.0 * I * (2 * I - 1) * J * (2 * J - 1))
 
     identity_I = np.eye(Ix.shape[0])
     identity_J = np.eye(Jx.shape[0])
@@ -121,3 +140,37 @@ def hyperfine_hamiltonian(
     )
 
     return H_hf + H_zeeman
+
+
+_MHZ_IN_HARTREE = 1e6 / 6.579683920502e15
+
+#: Ground-state (J = 1/2) parameters of common alkali atoms.  ``A_hf`` in
+#: hartree, g-factors in the Bohr-magneton convention.  Sources: E. Arimondo,
+#: M. Inguscio, P. Violino, Rev. Mod. Phys. 49, 31 (1977); D. A. Steck,
+#: "Rubidium 87 / Rubidium 85 / Cesium / Sodium D Line Data".
+ALKALI_GROUND_STATES = {
+    "6Li":   dict(I=1.0, J=0.5, A_hf=152.1368407 * _MHZ_IN_HARTREE,
+                  g_J=2.0023010, g_I=-0.0004476540),
+    "23Na":  dict(I=1.5, J=0.5, A_hf=885.81306440 * _MHZ_IN_HARTREE,
+                  g_J=2.00229600, g_I=-0.00080461080),
+    "40K":   dict(I=4.0, J=0.5, A_hf=-285.7308 * _MHZ_IN_HARTREE,
+                  g_J=2.00229421, g_I=0.000176490),
+    "85Rb":  dict(I=2.5, J=0.5, A_hf=1011.910813 * _MHZ_IN_HARTREE,
+                  g_J=2.00233113, g_I=-0.00029364000),
+    "87Rb":  dict(I=1.5, J=0.5, A_hf=3417.341305452145 * _MHZ_IN_HARTREE,
+                  g_J=2.00233113, g_I=-0.0009951414),
+    "133Cs": dict(I=3.5, J=0.5, A_hf=2298.1579425 * _MHZ_IN_HARTREE,
+                  g_J=2.00254032, g_I=-0.00039885395),
+}
+
+
+def alkali_hamiltonian(atom: str, B_gauss=0.0):
+    """Hyperfine + Zeeman Hamiltonian of a ground-state alkali atom by name.
+
+    ``atom`` is a key of :data:`ALKALI_GROUND_STATES` (e.g. ``"87Rb"``).
+    """
+    try:
+        p = ALKALI_GROUND_STATES[atom]
+    except KeyError:
+        raise ValueError(f"unknown atom {atom!r}; known: {sorted(ALKALI_GROUND_STATES)}") from None
+    return hyperfine_hamiltonian(B_gauss=B_gauss, **p)

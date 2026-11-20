@@ -128,9 +128,11 @@ def _long_closed_ratio(tail, mu, ell, kappa, r1, r2):
 
     def rhs(r, state):
         d, dp = state
+        # kappa**2 = -k2 already contains the factor 2 mu
         q = (
             ell * (ell + 1) / r**2
-            + 2.0 * mu * (kappa**2 + tail.potential(r))
+            + kappa**2
+            + 2.0 * mu * tail.potential(r)
         )
         return (dp, q * d)
 
@@ -304,3 +306,149 @@ def scattering_length_from_s(s_ii, k: float) -> complex:
     """Energy-dependent s-wave scattering length, free of branch cuts."""
     s = np.complex128(s_ii)
     return complex(np.divide(1.0 - s, 1j * k * (1.0 + s)))
+
+
+# --------------------------------------------------------------------------
+# Single-radius matching of a log-derivative matrix (default)
+# --------------------------------------------------------------------------
+
+def _check_ell_and_tails(N, ell, long_range):
+    raw_ell = np.asarray(ell, dtype=object)
+    if any(isinstance(x, (bool, np.bool_)) for x in raw_ell.flat):
+        raise ValueError("ell must contain non-negative integers, not booleans")
+    try:
+        ell_values = np.asarray(ell, dtype=float)
+    except (TypeError, ValueError):
+        raise ValueError("ell must contain non-negative integers") from None
+    if (not np.all(np.isfinite(ell_values)) or np.any(ell_values < 0)
+            or np.any(ell_values != np.round(ell_values))):
+        raise ValueError("ell must contain non-negative integers")
+    try:
+        ell = np.broadcast_to(ell_values.astype(int), (N,))
+    except ValueError:
+        raise ValueError("ell must be a scalar or have one entry per channel") from None
+    if long_range is None:
+        tails = (None,) * N
+    elif isinstance(long_range, LongRange):
+        tails = (long_range,) * N
+    else:
+        tails = tuple(long_range)
+        if len(tails) != N:
+            raise ValueError("long_range must have one entry per channel")
+        if any(t is not None and not isinstance(t, LongRange) for t in tails):
+            raise TypeError("each long_range entry must be LongRange or None")
+    return ell, tails
+
+
+def _long_open_values_at(tail, mu, ell, k, r):
+    """Open reference pair (F, F', G, G') at one radius, integrated in from r_far."""
+    rf = float(tail.r_far)
+    if not (np.isfinite(r) and 0.0 < r < rf):
+        raise ValueError("matching radius must satisfy 0 < r < LongRange.r_far")
+    y0 = np.asarray(_free_open_values(ell, k, rf), dtype=float)
+
+    def rhs(x, y):
+        q = ell * (ell + 1) / x**2 + 2.0 * mu * tail.potential(x) - k**2
+        return (y[1], q * y[0], y[3], q * y[2])
+
+    sol = solve_ivp(rhs, (rf, r), y0, method="DOP853", t_eval=(r,),
+                    rtol=tail.rtol, atol=tail.atol)
+    if not sol.success or not np.all(np.isfinite(sol.y)):
+        raise RuntimeError(f"open long-range reference integration failed: {sol.message}")
+    f, fp, g, gp = sol.y[:, -1]
+    return f, fp, g, gp
+
+
+def _free_closed_logderiv(ell, kappa, r):
+    """d/dr ln D(r) for the decaying free solution (Riccati-modified Bessel)."""
+    if kappa == 0.0:
+        return -float(ell) / r
+    x = kappa * r
+    nu = ell + 0.5
+    km, kp, kc = kve(abs(nu - 1.0), x), kve(nu + 1.0, x), kve(nu, x)
+    return kappa * (0.5 / x - 0.5 * (km + kp) / kc)
+
+
+def _long_closed_logderiv(tail, mu, ell, kappa, r):
+    """d/dr ln D(r) for the decaying solution in the long-range reference tail."""
+    rf = float(tail.r_far)
+    if not (np.isfinite(r) and 0.0 < r < rf):
+        raise ValueError("matching radius must satisfy 0 < r < LongRange.r_far")
+    state = np.array([1.0, _free_closed_logderiv(ell, kappa, rf)])
+
+    def rhs(x, s):
+        # kappa**2 = -k2 already contains the factor 2 mu
+        q = ell * (ell + 1) / x**2 + kappa**2 + 2.0 * mu * tail.potential(x)
+        return (s[1], q * s[0])
+
+    n_seg = max(1, int(np.ceil(np.log(rf / r) / np.log(1.25))))
+    radii = np.geomspace(rf, r, n_seg + 1)
+    for a, b in zip(radii[:-1], radii[1:]):
+        sol = solve_ivp(rhs, (float(a), float(b)), state, method="DOP853",
+                        rtol=tail.rtol, atol=tail.atol)
+        if not sol.success:
+            raise RuntimeError(f"closed long-range wavefunction integration failed: {sol.message}")
+        state = sol.y[:, -1]
+        scale = float(np.max(np.abs(state)))
+        if not np.isfinite(scale) or scale == 0.0:
+            raise RuntimeError("closed long-range wavefunction lost numerical scale")
+        state = state / scale
+    if state[0] == 0.0:
+        raise RuntimeError("closed-channel reference has a node at the matching radius")
+    return float(state[1] / state[0])
+
+
+def match_k_matrix_logderiv(Y, r, k2, ell, mu=1.0, long_range=None):
+    """Match a log-derivative matrix ``Y = psi' psi^{-1}`` at the single radius ``r``.
+
+    Open channels: ``psi = F + G K``; closed channels: decaying ``D`` with
+    ``D(r) = 1``.  Solving ``Y psi = psi'`` gives
+    ``[Y G - G', Y D - D'] X = F' - Y F`` and ``K`` is the open-open block of
+    ``X``.  Returns ``(K, open_idx, k_open, asymmetry)`` like
+    :func:`match_k_matrix`.
+    """
+    Y = np.asarray(Y, dtype=float)
+    k2 = np.asarray(k2, dtype=float)
+    N = len(k2)
+    if Y.shape != (N, N) or not np.all(np.isfinite(Y)):
+        raise ValueError("Y must be a finite (N, N) array")
+    if not (np.isfinite(r) and r > 0):
+        raise ValueError("matching radius must be finite and > 0")
+    ell, tails = _check_ell_and_tails(N, ell, long_range)
+    if not (np.isfinite(mu) and mu > 0):
+        raise ValueError("mu must be finite and > 0")
+
+    open_idx = np.flatnonzero(k2 > 0)
+    closed_idx = np.flatnonzero(k2 <= 0)
+    n_open, n_closed = len(open_idx), len(closed_idx)
+    if n_open == 0:
+        raise ValueError("no open channel at this energy")
+    k_open = np.sqrt(k2[open_idx])
+
+    F = np.zeros((N, n_open)); Fp = np.zeros((N, n_open))
+    G = np.zeros((N, n_open)); Gp = np.zeros((N, n_open))
+    for c, i in enumerate(open_idx):
+        k, l, tail = k_open[c], int(ell[i]), tails[i]
+        if tail is None:
+            f, fp, g, gp = _free_open_values(l, k, r)
+        else:
+            f, fp, g, gp = _long_open_values_at(tail, mu, l, k, r)
+        F[i, c], Fp[i, c], G[i, c], Gp[i, c] = f, fp, g, gp
+
+    D = np.zeros((N, n_closed)); Dp = np.zeros((N, n_closed))
+    for c, i in enumerate(closed_idx):
+        kappa, l, tail = np.sqrt(-k2[i]), int(ell[i]), tails[i]
+        D[i, c] = 1.0
+        Dp[i, c] = (_free_closed_logderiv(l, kappa, r) if tail is None
+                    else _long_closed_logderiv(tail, mu, l, kappa, r))
+
+    lhs = np.hstack([Y @ G - Gp, Y @ D - Dp])
+    rhs = Fp - Y @ F
+    try:
+        sol = np.linalg.solve(lhs, rhs)
+    except np.linalg.LinAlgError as exc:
+        raise RuntimeError("asymptotic matching matrix is singular; "
+                           "check the grid, the energy and the channel setup") from exc
+    K = sol[:n_open, :]
+    asym = float(np.max(np.abs(K - K.T)) / max(np.max(np.abs(K)), 1e-300))
+    return 0.5 * (K + K.T), open_idx, k_open, asym
