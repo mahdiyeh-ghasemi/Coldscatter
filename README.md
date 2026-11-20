@@ -9,9 +9,11 @@ a small, well-documented API on top of a numerically validated core.
 
 > **Status: v0.1 (pre-alpha).** The core solver has passed internal tests against
 > analytical solutions and independent numerical integration references (see
-> [Validation](#validation)). It has **not yet** been benchmarked against MOLSCAT
-> or experimental scattering data for realistic atomic/molecular systems. External
-> benchmarking is the first item on the [roadmap](docs/ROADMAP.md).
+> [Validation](#validation)). On an identical two-channel Lennard-Jones model it
+> agrees with converged MOLSCAT 2025.0 to ~1e-7 in the S matrix and ~1e-8 in the
+> near-threshold scattering length ([benchmarks/molscat](benchmarks/molscat/)).
+> It has **not yet** been benchmarked against MOLSCAT or experimental data for
+> realistic atomic/molecular systems (hyperfine/Zeeman pair bases are not built in yet).
 ## Quick start
 
 ```bash
@@ -62,7 +64,8 @@ print(a)  # complex scattering length in bohr
 | module | role |
 |---|---|
 | `CoupledChannels` | N-channel radial problem: thresholds `E_i(B)`, potential matrix `V_ij(R)`, partial waves |
-| `renormalized_numerov` | stable matrix propagator (Johnson 1977), fast scalar path, batched-over-field path |
+| `log_derivative` | default: Johnson (1973) log-derivative propagator, single-radius matching, two-sector grids, batched-over-field path |
+| `renormalized_numerov` | legacy matrix propagator (Johnson 1977), `propagator="numerov"` |
 | `asymptotics` | free or explicit diagonal long-range reference matching, open and closed channels |
 | `ScatteringResult` | `K`, `S`, complex scattering length, elastic/inelastic/total cross sections |
 | `potentials`, `units` | Lennard-Jones, Gaussian, ..., vdW length and `a_bar`; atomic units, K, gauss |
@@ -71,11 +74,16 @@ Conventions and equations: [docs/PHYSICS.md](docs/PHYSICS.md). Full installation
 
 ## Validation
 
+**0.1.1:** default propagator is now Johnson's log-derivative method with
+single-radius matching; a closed-channel long-range bug was fixed. See
+[docs/FIXES_0.1.1.md](docs/FIXES_0.1.1.md), [CHANGELOG.md](CHANGELOG.md) and the
+MOLSCAT benchmark in [benchmarks/molscat](benchmarks/molscat/).
+
 Run `pytest` (or `python tests/run_all.py` without pytest). The internal test suite checks:
 
 - square well against the analytic scattering length (relative error ~1e-6)
 - Lennard-Jones against an independent adaptive ODE solver (< 1e-4)
-- Numerov fourth-order convergence with step size; an `R_max^-3` matching-tail error in the specific free-reference test model (not a general error law for explicit long-range matching)
+- log-derivative and Numerov fourth-order convergence with step size; an `R_max^-3` matching-tail error in the specific free-reference test model (not a general error law for explicit long-range matching)
 - van der Waals universality: median `a` over short-range phases ~ Gribakin-Flambaum `a_bar`
 - `sigma_el -> 4 pi |a|^2`; p-wave Wigner threshold law `tan(delta_1) ~ k^3`
 - decoupled two-channel limit reproduces the single channel exactly
