@@ -15,23 +15,20 @@ Riccati–Bessel functions at the same R_max.
 
 ## Results (Coldscatter step 5×10⁻⁴ Å for A/B, 2×10⁻³ Å for C)
 
-| case | quantity | 0.1.1 default (log-derivative) | 0.1.0 (Numerov, two-point matching) |
-|---|---|---|---|
-| A: E = 200 cm⁻¹, both channels open, R_max = 6 Å | S₁₁, S₂₁, S₂₂ | 5.5×10⁻⁸ | 3.8×10⁻⁷ |
-| B: closed-channel resonance near 42.839 cm⁻¹, R_max = 6 Å | S₁₁ away from the pole | 1.2×10⁻⁷ | 6.5×10⁻⁷ |
-| B: same, within 10⁻⁴ cm⁻¹ of the pole | S₁₁ | 8.6×10⁻⁵ (≈10⁻⁸ cm⁻¹ shift in resonance position) | 8.6×10⁻⁵ |
-| C: E = 10⁻⁴ and 10⁻⁶ cm⁻¹, R_max = 100 Å | scattering length a(k) | 7×10⁻⁹ relative, at any step | 1×10⁻⁸ at h = 2×10⁻³ Å, 5.5×10⁻⁶ at h = 2.5×10⁻⁴ Å |
+| case | quantity | max \|Coldscatter − MOLSCAT\| |
+|---|---|---|
+| A: E = 200 cm⁻¹, both channels open, R_max = 6 Å | S₁₁, S₂₁, S₂₂ | 5.5×10⁻⁸ |
+| B: closed-channel resonance near 42.839 cm⁻¹, R_max = 6 Å | S₁₁ away from the pole | 1.2×10⁻⁷ |
+| B: same, within 10⁻⁴ cm⁻¹ of the pole | S₁₁ | 8.6×10⁻⁵ (≈10⁻⁸ cm⁻¹ shift in resonance position) |
+| C: E = 10⁻⁴ and 10⁻⁶ cm⁻¹, R_max = 100 Å | scattering length a(k) | 7×10⁻⁹ relative, independent of the step |
 
-Step-size behaviour (case A, |ΔS₂₁|): Numerov 1.4×10⁻⁷ → 7.0×10⁻⁸ → 3.5×10⁻⁸ →
-1.8×10⁻⁸ for h = 2, 1, 0.5, 0.25 ×10⁻³ Å (first order); log-derivative is
-converged to 7×10⁻¹⁰ already at h = 10⁻³ Å.
+Case A is converged to 7×10⁻¹⁰ in S₂₁ already at a step of 10⁻³ Å.
 
 ## Convergence notes for MOLSCAT (important)
 
 * The **shipped MOLSCAT example `molscat-2chan-LJ.input` is not converged**
-  (AIPROP with DRS = DRL = 10⁻³): its S₂₁ is off by 1.5×10⁻³ relative. This
-  is the source of the "~10⁻³ unexplained difference" previously recorded in
-  `docs/VALIDATION_STATUS.md`. With DRS = DRL ≤ 10⁻⁴ (MAPROP + MDPROP)
+  (AIPROP with DRS = DRL = 10⁻³): its S₂₁ is off by 1.5×10⁻³ relative.
+  With DRS = DRL ≤ 10⁻⁴ (MAPROP + MDPROP)
   MOLSCAT changes by < 10⁻¹⁰ and agrees with Coldscatter.
 * At long range use AIPROP with a tight `TOLHIL`. Fixed-step MDPROP out to
   100 Å accumulates round-off: DRL = 2×10⁻⁴ vs 5×10⁻⁵ changes a by 1 %.
