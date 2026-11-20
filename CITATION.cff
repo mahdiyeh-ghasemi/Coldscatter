@@ -2,8 +2,7 @@ cff-version: 1.2.0
 message: "If you use Coldscatter in your research, please cite the software and the physical methods or data sources used in your work."
 title: "Coldscatter"
 version: "0.1.1"
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24406777.svg)](https://doi.org/10.5281/zenodo.24406777)
-authors:
+doi: 10.5281/zenodo.24406777authors:
   - family-names: "Ghasemi"
     given-names: "Mahdiyeh"
 type: software
