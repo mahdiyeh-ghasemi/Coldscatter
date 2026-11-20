@@ -1,0 +1,145 @@
+{
+  "description": "Converged MOLSCAT 2025.0 reference values for the two-channel Lennard-Jones 12-6 model (both diagonal potentials and the coupling are LJ 12-6). Generated with the inputs written by write_molscat_inputs.py.",
+  "program": "MOLSCAT 2025.0 (J. M. Hutson & C. R. Le Sueur, Comput. Phys. Commun. 241, 9 (2019); https://github.com/molscat/molscat), molscat-basic executable, gfortran, CODATA 2022 constants",
+  "generated": "2026-11-20",
+  "model": {
+    "reduced_mass_amu": 20.0,
+    "units": "R in angstrom, energies in cm^-1",
+    "thresholds_cm": [
+      0.0,
+      100.0
+    ],
+    "V11": {
+      "C12": 400.0,
+      "C6": -400.0
+    },
+    "V22": {
+      "C12": 400.0,
+      "C6": -400.0
+    },
+    "V12": {
+      "C12": 40.0,
+      "C6": -40.0
+    },
+    "note": "V(R) = C12 * R**-12 + C6 * R**-6 (cm^-1, R in angstrom); s-wave, JTOT = 0"
+  },
+  "cases": {
+    "A_two_open_channels": {
+      "molscat_settings": "RMIN=0.8 (start chosen by IRMSET=8: 0.6968), RMID=1.5, RMAX=6.0, IPROPS=7 (MAPROP), IPROPL=6 (MDPROP), DRS=DRL=2e-5",
+      "convergence": "Agrees with DRS=DRL=1e-4 to 1e-10. The shipped MOLSCAT example (IPROPL=9, DRS=DRL=1e-3) is NOT converged: its S21 differs by 1.5e-3 relative.",
+      "energy_cm": 200.0,
+      "rmax_A": 6.0,
+      "S": {
+        "11": [
+          0.99387619202624,
+          0.10940271999299
+        ],
+        "21": [
+          -0.015449735934492,
+          -0.0015701723217646
+        ],
+        "22": [
+          -0.99556494587508,
+          -0.092786199206496
+        ]
+      }
+    },
+    "B_closed_channel_resonance": {
+      "molscat_settings": "as case A (MDPROP, DRS=DRL=2e-5, RMAX=6.0); channel 2 is closed at these energies",
+      "rmax_A": 6.0,
+      "pole_energies_cm": [
+        42.839,
+        42.8392
+      ],
+      "points": [
+        {
+          "energy_cm": 30.0,
+          "S11": [
+            -0.75586091987591,
+            0.65473221228556
+          ]
+        },
+        {
+          "energy_cm": 42.838,
+          "S11": [
+            0.9153956052024,
+            -0.40255544459879
+          ]
+        },
+        {
+          "energy_cm": 42.8385,
+          "S11": [
+            0.95219431211889,
+            -0.30549303096542
+          ]
+        },
+        {
+          "energy_cm": 42.8388,
+          "S11": [
+            0.99417022606643,
+            -0.10782189760443
+          ]
+        },
+        {
+          "energy_cm": 42.839,
+          "S11": [
+            0.90907541958789,
+            0.41663158965819
+          ]
+        },
+        {
+          "energy_cm": 42.8392,
+          "S11": [
+            -0.78065933972064,
+            -0.62495679475219
+          ]
+        },
+        {
+          "energy_cm": 42.8395,
+          "S11": [
+            0.55648396547583,
+            -0.83085834903929
+          ]
+        },
+        {
+          "energy_cm": 42.84,
+          "S11": [
+            0.74451894562896,
+            -0.66760133283236
+          ]
+        },
+        {
+          "energy_cm": 60.0,
+          "S11": [
+            -0.8357994874103,
+            0.54903480476621
+          ]
+        }
+      ]
+    },
+    "C_near_threshold_scattering_length": {
+      "molscat_settings": "RMAX=100.0, IPROPS=7 (MAPROP, DRS=2e-5), IPROPL=9 (AIPROP, initial DRL=2e-5), TOLHIL=1e-10",
+      "convergence": "TOLHIL 1e-8 -> 1e-10 changes a by 1e-8 relative. Fixed-step MDPROP over this range is NOT reliable: DRL=2e-4 vs 5e-5 changes a by 1%.",
+      "rmax_A": 100.0,
+      "points": [
+        {
+          "energy_cm": 0.0001,
+          "a_A": 3.905913204186,
+          "S11": [
+            0.9963865394921,
+            -0.084934468379841
+          ]
+        },
+        {
+          "energy_cm": 1e-06,
+          "a_A": 3.9031266565793,
+          "S11": [
+            0.99996385227792,
+            -0.0085025959274009
+          ]
+        }
+      ],
+      "a_definition": "a(k) = (1 - S11) / (i k (1 + S11)), same as MOLSCAT's k-dependent scattering length"
+    }
+  }
+}
