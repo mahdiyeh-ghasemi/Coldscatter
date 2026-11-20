@@ -1,4 +1,5 @@
 # Coldscatter
+doi: 10.5281/zenodo.24406777
 
 **Coupled-channel scattering for ultracold atoms and molecules, implemented in a readable, tested Python package.**
 
