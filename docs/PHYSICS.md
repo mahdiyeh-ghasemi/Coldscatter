@@ -15,7 +15,7 @@ Channel `i` is open if `k_i^2 = 2 mu (E - E_i) > 0`.
 
 ## Propagation
 
-**Default (since 0.1.1): Johnson log-derivative method** (B. R. Johnson, J. Comput. Phys.
+**Default: Johnson log-derivative method** (B. R. Johnson, J. Comput. Phys.
 13, 445 (1973)), which carries `Y = psi' psi^{-1}` directly. On a sector with an even number
 of intervals of width `h` (Coldscatter uses the user grid plus its mid-points, so the
 propagation step is `step/2`):
@@ -28,7 +28,7 @@ The global error is `O(h^4)`. The hard-wall condition `psi = 0` is imposed **at*
 (`Y_start -> infinity`). A second, coarser sector (`Grid(r_mid=..., step_long=...)`) starts
 from the `Y` at the end of the first one.
 
-**Legacy (`propagator="numerov"`): renormalized Numerov** (B. R. Johnson, J. Chem. Phys. 67,
+**Alternative (`propagator="numerov"`): renormalized Numerov** (B. R. Johnson, J. Chem. Phys. 67,
 4086 (1977)) propagates `G_n = phi_{n-1} phi_n^{-1}` with `phi_n = (1 - h^2 W_n/12) psi_n`:
 
     G_{n+1} = ( 2 + h^2 W_n (1 - h^2 W_n/12)^{-1} - G_n )^{-1}.
@@ -44,10 +44,8 @@ The hard wall is one step before `R_min`.
 where the closed-channel functions are normalised to `D(r_max) = 1`, so `D'` is their
 logarithmic derivative.
 
-**Legacy: two points.** With Numerov, `psi(R_1) = M psi(R_2)` at the last two grid points.
-This assumes the free functions hold across `[R_1, R_2]`, which gives a step error
-`O(h V(r_max))` (first order), and near threshold the nearly equal values at the two points
-cancel, so the error *grows* as `h` is refined. Asymptotically
+**Numerov: two points.** With Numerov, `psi(R_1) = M psi(R_2)` at the last two grid points.
+Asymptotically
 
     psi = F a + G b + D d,
 
