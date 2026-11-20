@@ -163,9 +163,11 @@ published results and MOLSCAT output.
 
 ## Citation
 
-If you use Coldscatter in research, cite the software version and the
-underlying physical methods and data sources. See
-[CITATION.cff](CITATION.cff) and [docs/CITATION_AND_COPYRIGHT.md](docs/CITATION_AND_COPYRIGHT.md).
+If you use Coldscatter in research, cite the exact software version used, together with the underlying physical methods and data sources. Coldscatter is archived on Zenodo:
+
+> Ghasemi, M. (2026). *Coldscatter* (version 0.1.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.24406777
+
+See [CITATION.cff](CITATION.cff) and [docs/CITATION_AND_COPYRIGHT.md](docs/CITATION_AND_COPYRIGHT.md) for details, including what to report in a paper.
 
 ## Author
 
