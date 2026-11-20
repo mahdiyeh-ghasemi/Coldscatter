@@ -1,14 +1,14 @@
 # Coldscatter User Manual
 
-**Version:** 0.1 development
+**Version:** 0.1.1
 **Units:** atomic units unless explicitly stated
 
 ## 1. Scope
 
 Coldscatter solves radial coupled-channel scattering problems and extracts
 open-channel K and S matrices, energy-dependent scattering lengths, and
-partial-wave cross sections. It includes a renormalized Numerov propagator
-and asymptotic matching.
+partial-wave cross sections. It includes a Johnson log-derivative propagator
+(default), a renormalized Numerov propagator (legacy), and asymptotic matching.
 
 This manual describes the current public API and the optional long-range
 reference matching feature. The package is under active development;
@@ -74,6 +74,46 @@ print(result.cross_sections())
 The collision energy is measured from the threshold of the entrance
 channel. The radial grid must resolve the shortest relevant wavelength
 and extend sufficiently far into the asymptotic region.
+
+### 4.1 Propagator and grid (0.1.1)
+
+`solve`, `scan` and `scan_field` take `propagator="log-derivative"`
+(default) or `propagator="numerov"` (legacy). The default carries the
+log-derivative matrix and matches at the single radius `r_max`; it is
+fourth-order in the step and does not lose precision near threshold.
+The hard wall (`psi = 0`) sits **at** `r_min` with the default and one step
+before `r_min` with `"numerov"`; place `r_min` deep in the repulsive wall
+so that this does not matter.
+
+For long ranges use a two-sector grid: a fine step through the
+short-range well and a coarse step outside it (like MOLSCAT's RMID/DRL):
+
+```python
+grid = cs.Grid(r_min=4.0, r_max=1500.0, step=0.02, r_mid=40.0, step_long=0.5)
+```
+
+`Grid.r` returns all points; `Grid.sectors` lists `(r_start, step,
+n_intervals)`. Two-sector grids need the log-derivative propagator.
+
+A warning is raised when a potential or coupling has not decayed at
+`r_max` (decays slower than about `R^-3`, e.g. a constant coupling):
+free-reference matching assumes it is negligible beyond `r_max`.
+
+### 4.2 Identical particles
+
+`result.cross_sections(identical="bosons")` (or `"fermions"`) applies the
+symmetrisation factor for two identical particles in the same internal
+state: 2 for allowed partial waves (even `l` for bosons, odd for fermions)
+and 0 for forbidden ones. The default `None` means distinguishable.
+
+### 4.3 Atomic structure
+
+`coldscatter.atomic.alkali_hamiltonian("87Rb", B_gauss)` builds the
+hyperfine + Zeeman Hamiltonian from `ALKALI_GROUND_STATES` (6Li, 23Na,
+40K, 85Rb, 87Rb, 133Cs). `hyperfine_hamiltonian(...)` defaults to 87Rb
+g-factors, so pass `g_J`, `g_I` explicitly for other atoms; `B_hf` adds the
+electric-quadrupole term for `I, J >= 1`. A two-atom hyperfine/Zeeman
+channel basis for the scattering solver is not yet built in (roadmap v0.3).
 
 ## 5. Long-range reference matching
 
@@ -145,11 +185,14 @@ with DOP853. Open-channel reference solutions start from the free
 Riccati-Bessel pair. Closed-channel reference wavefunctions are propagated
 as the second-order pair `(D, D')`. Piecewise rescaling controls their
 dynamic range while retaining the scale needed to recover the signed
-ratio `D(r1)/D(r2)`. This avoids logarithmic-derivative poles when the
-reference wavefunction crosses a node. The denominator radius `r2`
-must not coincide with a node.
+ratio `D(r1)/D(r2)` (legacy path) or the log-derivative `D'/D` at `r_max`
+(default path). The matching radius must not coincide with a node of `D`.
+Versions <= 0.1.0 used `2 mu (kappa^2 + V)` instead of `kappa^2 + 2 mu V`
+in this closed-channel integration; results with closed-channel
+`LongRange` tails from those versions should be recomputed.
 
-The matching itself uses the last two radial grid points. Check the
+With the default propagator the matching uses the single radius `r_max`
+(the legacy Numerov path uses the last two grid points). Check the
 stability of observables by varying both:
 
 - `Grid.r_max`, which changes the matching location;
@@ -200,7 +243,8 @@ A `ScatteringResult` contains:
 - `k_asymmetry`: relative asymmetry of the unsymmetrized K matrix;
 - `scattering_length()`: energy-dependent complex s-wave scattering
   length for the entrance channel;
-- `cross_sections()`: elastic, inelastic, loss, and total cross sections.
+- `cross_sections(identical=None)`: elastic, inelastic, loss, and total
+  cross sections (see 4.2 for identical particles).
 
 The scattering length is energy-dependent. For a reliable zero-energy
 interpretation, use a sufficiently low collision energy and check the
@@ -229,7 +273,8 @@ python examples/03_long_range_matching.py
 - The tail is an explicitly supplied reference model; coefficients are
   not inferred automatically from arbitrary potential callables.
 - The finite `r_far` initialization requires convergence checks.
-- A uniform radial grid is used by the current propagator.
+- The grid is uniform or two uniform sectors (`r_mid`, `step_long`);
+  fully adaptive step control is not implemented.
 - The channel basis and physical interaction matrix are supplied by
   the user; automatic construction of general atomic and molecular
   channel bases is outside this API.
