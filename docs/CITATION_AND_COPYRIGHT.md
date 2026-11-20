@@ -71,11 +71,11 @@ for every Coldscatter installation or binary distribution.
 
 ## Publisher and source attribution
 
-Coldscatter is currently distributed from its GitHub repository. It has
-not been assigned a journal publisher or archival DOI in this development
-version. Do not attribute the software to a scientific publisher or claim
-that it has been peer reviewed unless that status changes and can be
-verified.
+Coldscatter is distributed from its GitHub repository and archived on
+Zenodo (DOI: 10.5281/zenodo.24406777). It has not been assigned a journal
+publisher and has not been peer reviewed. Do not attribute the software
+to a scientific publisher or claim that it has been peer reviewed unless
+that status changes and can be verified.
 
 When referring to an external article, dataset, figure, or codebase,
 identify its actual authors, title, publication venue or publisher,
