@@ -1,5 +1,5 @@
 """coldscatter - coupled-channel scattering for ultracold atoms and molecules."""
-from . import units
+from . import atomic, units
 from .analysis import feshbach_a, fit_feshbach
 from .models import single_channel, two_channel_feshbach
 from .potentials import (
@@ -15,10 +15,15 @@ from .potentials import (
 from .solver import CoupledChannels, Grid, ScatteringResult
 from .long_range import LongRange
 
-__version__ = "0.1.0.dev0"
+try:  # single source of truth: pyproject.toml
+    from importlib.metadata import PackageNotFoundError, version as _version
+    __version__ = _version("coldscatter")
+except PackageNotFoundError:  # running from a source tree without installation
+    __version__ = "0.1.1"
 
 __all__ = [
     "Constant",
+    "atomic",
     "CoupledChannels",
     "Exponential",
     "FromFunction",
