@@ -8,7 +8,7 @@
 Coldscatter solves radial coupled-channel scattering problems and extracts
 open-channel K and S matrices, energy-dependent scattering lengths, and
 partial-wave cross sections. It includes a Johnson log-derivative propagator
-(default), a renormalized Numerov propagator (legacy), and asymptotic matching.
+(default), a renormalized Numerov propagator, and asymptotic matching.
 
 This manual describes the current public API and the optional long-range
 reference matching feature. The package is under active development;
@@ -75,10 +75,10 @@ The collision energy is measured from the threshold of the entrance
 channel. The radial grid must resolve the shortest relevant wavelength
 and extend sufficiently far into the asymptotic region.
 
-### 4.1 Propagator and grid (0.1.1)
+### 4.1 Propagator and grid
 
 `solve`, `scan` and `scan_field` take `propagator="log-derivative"`
-(default) or `propagator="numerov"` (legacy). The default carries the
+(default) or `propagator="numerov"`. The default carries the
 log-derivative matrix and matches at the single radius `r_max`; it is
 fourth-order in the step and does not lose precision near threshold.
 The hard wall (`psi = 0`) sits **at** `r_min` with the default and one step
@@ -185,14 +185,11 @@ with DOP853. Open-channel reference solutions start from the free
 Riccati-Bessel pair. Closed-channel reference wavefunctions are propagated
 as the second-order pair `(D, D')`. Piecewise rescaling controls their
 dynamic range while retaining the scale needed to recover the signed
-ratio `D(r1)/D(r2)` (legacy path) or the log-derivative `D'/D` at `r_max`
+ratio `D(r1)/D(r2)` (Numerov path) or the log-derivative `D'/D` at `r_max`
 (default path). The matching radius must not coincide with a node of `D`.
-Versions <= 0.1.0 used `2 mu (kappa^2 + V)` instead of `kappa^2 + 2 mu V`
-in this closed-channel integration; results with closed-channel
-`LongRange` tails from those versions should be recomputed.
 
 With the default propagator the matching uses the single radius `r_max`
-(the legacy Numerov path uses the last two grid points). Check the
+(the Numerov path uses the last two grid points). Check the
 stability of observables by varying both:
 
 - `Grid.r_max`, which changes the matching location;
