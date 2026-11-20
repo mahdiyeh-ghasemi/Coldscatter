@@ -9,8 +9,34 @@ from coldscatter import units as u
 E_COLD = u.from_kelvin(1e-7)
 
 
+def _square_well(v0, r0):
+    # Mean value at the jump, the consistent discretisation of a step potential.
+    return cs.FromFunction(lambda r: np.where(np.isclose(r, r0, rtol=0, atol=1e-9), -v0 / 2,
+                                              np.where(r < r0, -v0, 0.0)))
+
+
 def test_square_well_exact():
-    """a = R0 [1 - tan(K R0)/(K R0)] for a square well with a hard wall at the origin."""
+    """a = R0 - tan(K (R0 - r_w)) / K for a square well with a hard wall at r_w.
+
+    The log-derivative propagator (default) puts the hard wall at r_min.
+    """
+    v0, r0 = 2e-6, 50.0
+    k0 = np.sqrt(2 * MU * v0)
+    prob = cs.single_channel(MU, _square_well(v0, r0))
+    for h in (0.05, 0.025, 0.0125):
+        exact = r0 - np.tan(k0 * (r0 - h)) / k0
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            res = prob.solve(u.from_kelvin(1e-9), cs.Grid(h, 3000.0, h))
+        assert abs(res.scattering_length().real - exact) / abs(exact) < 2e-6
+
+
+def test_square_well_exact_legacy_numerov():
+    """Legacy Numerov puts psi = 0 one step before r_min, i.e. at the origin here.
+
+    Only the coarser steps are checked: with two-point matching the error
+    grows again for finer steps near threshold (fixed by the default propagator).
+    """
     v0, r0 = 2e-6, 50.0
     k0 = np.sqrt(2 * MU * v0)
     prob = cs.single_channel(MU, cs.FromFunction(lambda r: np.where(r < r0, -v0, 0.0)))
@@ -18,7 +44,7 @@ def test_square_well_exact():
     for h in (0.05, 0.025):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            res = prob.solve(u.from_kelvin(1e-9), cs.Grid(h, 3000.0, h))
+            res = prob.solve(u.from_kelvin(1e-9), cs.Grid(h, 3000.0, h), propagator="numerov")
         assert abs(res.scattering_length().real - exact) / abs(exact) < 1e-4
 
 
