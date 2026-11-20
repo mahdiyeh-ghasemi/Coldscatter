@@ -1,4 +1,5 @@
-"""Regression tests for the fixes in 0.1.1 (see docs/FIXES_0.1.1.md)."""
+"""Tests for the log-derivative propagator, two-sector grids, boundary checks,
+identical particles, atomic presets, version metadata and resonance fit."""
 import re
 import warnings
 from pathlib import Path
@@ -22,7 +23,7 @@ from coldscatter.propagators import (
 HARTREE_HZ = 6.579683920502e15
 
 
-# --- 1-3: log-derivative propagator, single-radius matching, two sectors ---
+# --- log-derivative propagator, single-radius matching, two sectors ---
 
 def _exact_free_y(k, a, b):
     return k / np.tan(k * (b - a))
@@ -75,7 +76,7 @@ def _lj_problem():
     return cs.single_channel(mu, pot)
 
 
-def test_default_and_legacy_propagators_agree():
+def test_log_derivative_and_numerov_agree():
     prob = _lj_problem()
     grid = cs.Grid(5.5, 60.0, 0.002)
     e = cs.units.from_kelvin(1e-3)
@@ -114,7 +115,7 @@ def test_grid_rejects_half_specified_second_sector():
         cs.Grid(5.0, 100.0, 0.01, r_mid=200.0, step_long=0.1)
 
 
-# --- closed-channel long-range reference used 2 mu kappa^2 instead of kappa^2 ---
+# --- closed-channel long-range reference with a zero tail equals the free one ---
 
 @pytest.mark.parametrize("mu", [1.0, 1000.0, 50000.0])
 def test_zero_tail_closed_reference_equals_free(mu):
@@ -126,7 +127,7 @@ def test_zero_tail_closed_reference_equals_free(mu):
         _free_closed_logderiv(1, kappa, r1), rel=1e-8)
 
 
-# --- 4-5: boundary warnings ---
+# --- boundary warnings ---
 
 def test_non_decaying_coupling_warns():
     mu = cs.units.reduced_mass(40.0, 40.0)
@@ -150,7 +151,7 @@ def test_scan_warns_when_r_min_is_classically_allowed():
         model.scan([0.0, 1.0], cs.units.from_kelvin(1e-6), cs.Grid(9.0, 100.0, 0.01))
 
 
-# --- 6: atomic structure ---
+# --- atomic structure ---
 
 @pytest.mark.parametrize("atom,splitting_hz", [
     ("6Li", 228.2052610e6), ("23Na", 1771.6261288e6), ("85Rb", 3035.7324390e6),
@@ -183,7 +184,7 @@ def test_atomic_module_is_exported():
     assert cs.atomic.ALKALI_GROUND_STATES is ALKALI_GROUND_STATES
 
 
-# --- 7: identical particles ---
+# --- identical particles ---
 
 def test_identical_particle_cross_sections():
     prob = _lj_problem()
@@ -199,7 +200,7 @@ def test_identical_particle_cross_sections():
         res.cross_sections(identical="anyons")
 
 
-# --- 8: version ---
+# --- version ---
 
 def test_version_matches_pyproject():
     root = Path(__file__).resolve().parents[1]
@@ -208,7 +209,7 @@ def test_version_matches_pyproject():
     assert cs.__version__ == version
 
 
-# --- 10: resonance fit ---
+# --- resonance fit ---
 
 def test_fit_feshbach_with_zero_background_guess_and_validation():
     B = np.linspace(-5.0, 5.0, 81) + 0.0625
@@ -217,3 +218,10 @@ def test_fit_feshbach_with_zero_background_guess_and_validation():
     assert (a_bg, B0, delta) == pytest.approx((100.0, 0.3, 0.5), rel=1e-6)
     with pytest.raises(ValueError):
         cs.fit_feshbach([1.0, 2.0], [1.0, 2.0])
+
+
+# --- plotting API ---
+
+def test_plotting_functions_are_exported():
+    assert cs.plot_scattering_length is cs.plotting.plot_scattering_length
+    assert cs.export_results_csv is cs.plotting.export_results_csv
