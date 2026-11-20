@@ -1,10 +1,9 @@
-# Validation status (v0.1.1, pre-alpha)
+# Validation status (v0.1.1)
 
 ## Verified
 - Internal test suite passes (see `pytest`).
 - Single-channel and open-channel Wronskian checks.
-- Closed-channel reference checks against direct integration (the reference in
-  these tests was corrected in 0.1.1; see `docs/FIXES_0.1.1.md`, item 11).
+- Closed-channel long-range reference checks against direct integration.
 - Matching-radius stability.
 - Independent solve_ivp/DOP853 reference for a limited one-open/one-closed problem.
 - S-matrix symmetry and unitarity in the tested cases.
@@ -19,8 +18,8 @@
     (up to 9e-5) corresponds to a ~1e-8 cm^-1 offset of the resonance position;
   - near threshold (E = 1e-4, 1e-6 cm^-1, R_max = 100 angstrom): scattering
     length within 7e-9 relative, also on a two-sector grid.
-  The ~1e-3 difference reported for 0.1.0 came from the MOLSCAT example itself,
-  which is not converged with its shipped step sizes.
+  Note: MOLSCAT's own `molscat-2chan-LJ` example is not converged with its
+  shipped step sizes; the converged settings are recorded in the benchmark.
 
 ## Not yet validated
 - Multichannel configurations with more than one closed channel.
