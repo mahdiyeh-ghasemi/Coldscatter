@@ -23,10 +23,11 @@ citation managers. Cite the exact version used. Once a versioned release
 has been archived and assigned a DOI, prefer the DOI-based citation for
 that release.
 
-Until an archival DOI is available, a provisional citation is:
+Coldscatter is archived on Zenodo. Cite the exact version used. For version 0.1.1:
 
-> Ghasemi, M. (2026). *Coldscatter* (version 0.1.1) [Computer software].
-> GitHub. https://github.com/mahdiyeh-ghasemi/Coldscatter
+> Ghasemi, M. (2026). *Coldscatter* (version 0.1.1) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.24406777
+
+Replace the version, year, and DOI with those of the version actually used.
 
 Replace the version and year with those of the version actually used.
 Do not invent or imply a DOI before one has been issued.
