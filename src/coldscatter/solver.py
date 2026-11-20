@@ -7,23 +7,39 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .asymptotics import match_k_matrix, s_from_k, scattering_length_from_s
+from .asymptotics import (match_k_matrix, match_k_matrix_logderiv, s_from_k,
+                          scattering_length_from_s)
 from .potentials import as_potential
 from .long_range import LongRange
-from .propagators import renormalized_numerov, renormalized_numerov_batch
+from .propagators import (log_derivative, log_derivative_batch, renormalized_numerov,
+                          renormalized_numerov_batch)
+
+PROPAGATORS = ("log-derivative", "numerov")
+
+
+def _check_propagator(name):
+    if name not in PROPAGATORS:
+        raise ValueError(f"propagator must be one of {PROPAGATORS}, got {name!r}")
 
 
 @dataclass(frozen=True)
 class Grid:
-    """Uniform radial grid in bohr.
+    """Radial grid in bohr: uniform, or two uniform sectors.
 
     ``r_min`` must lie deep inside the repulsive wall (hard-wall boundary
     condition) and ``r_max`` far outside the range of the interaction.
+
+    Optional ``r_mid`` and ``step_long`` give a second, coarser sector from
+    ``r_mid`` to ``r_max`` (log-derivative propagator only).  Use a step that
+    resolves the short-range well up to ``r_mid`` and a larger one for the
+    slowly varying long range - the usual MOLSCAT RMID / DRL strategy.
     """
 
     r_min: float
     r_max: float
     step: float
+    r_mid: float | None = None
+    step_long: float | None = None
 
     def __post_init__(self):
         if not all(np.isfinite(v) for v in (self.r_min, self.r_max, self.step)):
@@ -32,20 +48,46 @@ class Grid:
             raise ValueError("r_min must be > 0 (bohr)")
         if self.step <= 0 or self.r_max <= self.r_min:
             raise ValueError("need step > 0 and r_max > r_min")
+        if (self.r_mid is None) != (self.step_long is None):
+            raise ValueError("give both r_mid and step_long, or neither")
+        if self.r_mid is not None:
+            if not (np.isfinite(self.r_mid) and np.isfinite(self.step_long)):
+                raise ValueError("r_mid and step_long must be finite numbers")
+            if not (self.r_min < self.r_mid < self.r_max) or self.step_long <= 0:
+                raise ValueError("need r_min < r_mid < r_max and step_long > 0")
         if self.n_points < 4:
             raise ValueError("grid too coarse (fewer than 4 points)")
-        n_exact = (self.r_max - self.r_min) / self.step
-        if abs(n_exact - round(n_exact)) > 1e-6:
-            warnings.warn("(r_max - r_min) is not a multiple of step: the grid ends at "
-                          f"r = {self.r[-1]:.6g}, not at r_max.", UserWarning, stacklevel=3)
+        for a, b, h, name in self._segments():
+            n_exact = (b - a) / h
+            if abs(n_exact - round(n_exact)) > 1e-6:
+                warnings.warn(f"{name} is not a multiple of step: the grid ends at "
+                              f"r = {self.r[-1]:.6g}, not at r_max.", UserWarning, stacklevel=3)
+
+    def _segments(self):
+        if self.r_mid is None:
+            return [(self.r_min, self.r_max, self.step, "(r_max - r_min)")]
+        return [(self.r_min, self.r_mid, self.step, "(r_mid - r_min)"),
+                (self.r_mid, self.r_max, self.step_long, "(r_max - r_mid)")]
+
+    @property
+    def sectors(self) -> list[tuple[float, float, int]]:
+        """``(r_start, step, n_intervals)`` for each uniform sector."""
+        out, start = [], self.r_min
+        for a, b, h, _ in self._segments():
+            m = max(1, round((b - a) / h))
+            out.append((start, h, m))
+            start = start + m * h
+        return out
 
     @property
     def n_points(self) -> int:
-        return round((self.r_max - self.r_min) / self.step) + 1
+        return sum(m for _, _, m in self.sectors) + 1
 
     @property
     def r(self) -> np.ndarray:
-        return self.r_min + self.step * np.arange(self.n_points)
+        parts = [r0 + h * np.arange(m + (i == len(self.sectors) - 1))
+                 for i, (r0, h, m) in enumerate(self.sectors)]
+        return np.concatenate(parts)
 
 
 @dataclass
@@ -90,19 +132,33 @@ class ScatteringResult:
         k = self.k_entrance
         return scattering_length_from_s(self.s(self.entrance, self.entrance), k)
 
-    def cross_sections(self) -> dict:
-        r"""Partial-wave cross sections in bohr^2 (distinguishable particles), with
-        ``pref = (2l+1) pi / k^2`` of the entrance channel:
+    def cross_sections(self, identical: str | None = None) -> dict:
+        r"""Partial-wave cross sections in bohr^2, with
+        ``pref = g (2l+1) pi / k^2`` of the entrance channel:
 
         * ``elastic``    = ``pref |1 - S_ii|^2``
         * ``inelastic``  = ``pref sum_{j != i, open} |S_ji|^2``  (state-changing collisions)
         * ``loss``       = ``pref (1 - sum_j |S_ji|^2)``  (flux leaving the modelled channels;
           zero for a unitary S matrix, non-zero only with absorbing/complex models)
         * ``total``      = ``elastic + inelastic + loss = 2 pref (1 - Re S_ii)`` (optical theorem)
+
+        ``identical``: ``None`` (distinguishable, ``g = 1``), ``"bosons"`` or
+        ``"fermions"`` for two identical particles in the *same* internal state
+        in the entrance channel.  Then ``g = 2`` for partial waves allowed by
+        exchange symmetry (even ``l`` for bosons, odd ``l`` for fermions) and
+        ``g = 0`` for forbidden ones.
         """
+        if identical not in (None, "bosons", "fermions"):
+            raise ValueError("identical must be None, 'bosons' or 'fermions'")
         i = self._o(self.entrance)
         k = self.k_open[i]
-        pref = (2 * int(self.ell[self.entrance]) + 1) * np.pi / k**2
+        l_in = int(self.ell[self.entrance])
+        if identical is None:
+            g = 1.0
+        else:
+            allowed = (l_in % 2 == 0) if identical == "bosons" else (l_in % 2 == 1)
+            g = 2.0 if allowed else 0.0
+        pref = g * (2 * l_in + 1) * np.pi / k**2
         row = self.S[:, i]
         to = {int(c): float(pref * abs(row[o]) ** 2)
               for o, c in enumerate(self.open_channels) if c != self.entrance}
@@ -210,14 +266,54 @@ class CoupledChannels:
         W[:, idx, idx] += 2.0 * self.mu * (thr - energy) + self.ell * (self.ell + 1) / r[:, None] ** 2
         return W
 
-    def _result(self, M, E, thr, B, entrance, r) -> ScatteringResult:
+    def _result(self, prop, E, thr, B, entrance, r, propagator) -> ScatteringResult:
+        """``prop`` is Y at r[-1] (log-derivative) or M (Numerov, legacy)."""
         k2 = 2.0 * self.mu * (E - thr)
-        K, open_idx, k_open, asym = match_k_matrix(
-            M, r[-2], r[-1], k2, self.ell, mu=self.mu,
-            long_range=self.long_range
-        )
+        if propagator == "log-derivative":
+            K, open_idx, k_open, asym = match_k_matrix_logderiv(
+                prop, r[-1], k2, self.ell, mu=self.mu, long_range=self.long_range)
+        else:
+            K, open_idx, k_open, asym = match_k_matrix(
+                prop, r[-2], r[-1], k2, self.ell, mu=self.mu, long_range=self.long_range)
         return ScatteringResult(self.mu, float(E), float(B), int(entrance), k2, self.ell.copy(),
                                 open_idx, k_open, K, s_from_k(K), asym)
+
+    @staticmethod
+    def _sectors(grid: Grid, propagator: str):
+        """List of ``(points, step)`` at which W is evaluated and propagated.
+
+        The log-derivative method needs an even number of intervals per
+        sector, so each sector uses its grid points plus mid-points (step
+        h/2).  The last point is always ``grid.r[-1]``.
+        """
+        if propagator == "numerov":
+            if grid.r_mid is not None:
+                raise ValueError("two-sector grids (r_mid, step_long) need "
+                                 "propagator='log-derivative'")
+            return [(grid.r, grid.step)]
+        return [(r0 + 0.5 * h * np.arange(2 * m + 1), 0.5 * h) for r0, h, m in grid.sectors]
+
+    def _check_boundaries(self, W_first, r):
+        if np.min(np.linalg.eigvalsh(np.atleast_3d(W_first).reshape(-1, self.n, self.n)), initial=np.inf) <= 0:
+            warnings.warn("a channel is classically allowed at r_min: the hard-wall boundary "
+                          "condition affects the result; decrease r_min.", stacklevel=3)
+        r_max = float(r[-1])
+        r_in = np.array([max(0.8 * r_max, float(r[0]))])
+        r_out = np.array([r_max])
+        for i in range(self.n):
+            for j in range(i, self.n):
+                p = self._pots[i][j]
+                if p is None:
+                    continue
+                v_out, v_in = abs(float(p(r_out)[0])), abs(float(p(r_in)[0]))
+                if v_out > 1e-14 and v_out > 0.5 * v_in:
+                    kind = "coupling" if i != j else "potential"
+                    warnings.warn(
+                        f"{kind} [{i}][{j}] does not decay at r_max = {r_max:.6g} bohr "
+                        f"(|V(r_max)| = {v_out:.3g} Eh, decays slower than ~R^-3). Matching "
+                        "assumes it is negligible beyond r_max: put constant offsets in "
+                        "`thresholds`, use a short-range form for couplings, or a LongRange "
+                        "reference for slow tails.", stacklevel=3)
 
     def _check_run(self, collision_energy, entrance):
         if not (np.isfinite(collision_energy) and collision_energy > 0):
@@ -227,44 +323,59 @@ class CoupledChannels:
             raise ValueError(f"entrance must be an integer in [0, {self.n - 1}]")
 
     def solve(self, collision_energy: float, grid: Grid, B: float = 0.0,
-              entrance: int = 0) -> ScatteringResult:
+              entrance: int = 0, propagator: str = "log-derivative") -> ScatteringResult:
         """Solve at fixed field ``B`` (gauss).
 
         ``collision_energy`` (hartree) is measured from the threshold of the
-        ``entrance`` channel.
+        ``entrance`` channel.  ``propagator`` is ``"log-derivative"`` (default:
+        Johnson propagator on the grid plus mid-points, matched at ``r_max``)
+        or ``"numerov"`` (legacy renormalized Numerov with two-point matching).
         """
         self._check_run(collision_energy, entrance)
+        _check_propagator(propagator)
         if not np.isfinite(B):
             raise ValueError("B must be finite (gauss)")
         thr = self.thresholds(B)
         E = thr[entrance] + collision_energy
-        r = grid.r
-        W = self.w_matrix(r, E, B)
-        if np.min(np.linalg.eigvalsh(W[0])) <= 0:
-            warnings.warn("a channel is classically allowed at r_min: the hard-wall boundary "
-                          "condition affects the result; decrease r_min.", stacklevel=2)
-        M = renormalized_numerov(W, grid.step)
-        return self._result(M, E, thr, B, entrance, r)
+        sectors = self._sectors(grid, propagator)
+        prop = None
+        for s_idx, (rp, h) in enumerate(sectors):
+            W = self.w_matrix(rp, E, B)
+            if s_idx == 0:
+                self._check_boundaries(W[0], grid.r)
+            prop = (log_derivative(W, h, prop) if propagator == "log-derivative"
+                    else renormalized_numerov(W, h))
+        return self._result(prop, E, thr, B, entrance, sectors[-1][0], propagator)
 
     def scan(self, fields, collision_energy: float, grid: Grid,
-             entrance: int = 0) -> list[ScatteringResult]:
+             entrance: int = 0, propagator: str = "log-derivative") -> list[ScatteringResult]:
         """Solve for many fields (gauss) in one batched sweep over the grid."""
         self._check_run(collision_energy, entrance)
+        _check_propagator(propagator)
         fields = np.atleast_1d(np.asarray(fields, dtype=float))
         if fields.ndim != 1 or fields.size == 0 or not np.all(np.isfinite(fields)):
             raise ValueError("fields must be a non-empty 1-D array of finite values (gauss)")
-        r = grid.r
+        sectors = self._sectors(grid, propagator)
         thr = np.array([self.thresholds(B) for B in fields])            # (nB, N)
         E = thr[:, entrance] + collision_energy                         # (nB,)
-        W0 = 2.0 * self.mu * self.potential_matrix(r)
-        idx = np.arange(self.n)
-        W0[:, idx, idx] += self.ell * (self.ell + 1) / r[:, None] ** 2
         D = 2.0 * self.mu * (thr - E[:, None])
-        M = renormalized_numerov_batch(W0, D, grid.step)
-        return [self._result(M[b], E[b], thr[b], fields[b], entrance, r)
+        idx = np.arange(self.n)
+        prop = None
+        for s_idx, (rp, h) in enumerate(sectors):
+            W0 = 2.0 * self.mu * self.potential_matrix(rp)
+            W0[:, idx, idx] += self.ell * (self.ell + 1) / rp[:, None] ** 2
+            if s_idx == 0:
+                first = np.broadcast_to(W0[0], (len(fields), self.n, self.n)).copy()
+                first[:, idx, idx] += D
+                self._check_boundaries(first, grid.r)
+            prop = (log_derivative_batch(W0, D, h, prop) if propagator == "log-derivative"
+                    else renormalized_numerov_batch(W0, D, h))
+        r_end = sectors[-1][0]
+        return [self._result(prop[b], E[b], thr[b], fields[b], entrance, r_end, propagator)
                 for b in range(len(fields))]
 
-    def scan_field(self, fields, collision_energy: float, grid: Grid, entrance: int = 0):
+    def scan_field(self, fields, collision_energy: float, grid: Grid, entrance: int = 0,
+                   propagator: str = "log-derivative"):
         """Complex s-wave scattering length ``a(B)`` in bohr for each field (gauss)."""
         return np.array([res.scattering_length() for res in
-                         self.scan(fields, collision_energy, grid, entrance)])
+                         self.scan(fields, collision_energy, grid, entrance, propagator)])
