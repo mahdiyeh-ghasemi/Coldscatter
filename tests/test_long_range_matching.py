@@ -211,9 +211,12 @@ def test_closed_long_range_ratio_matches_direct_wavefunction(ell, kappa):
 
     def rhs(r, state):
         D, Dp = state
+        # kappa**2 = -k2 already contains 2 mu (this reference used to repeat
+        # the 2 mu (kappa**2 + V) bug of _long_closed_ratio, so it could not catch it)
         q = (
             ell * (ell + 1) / r**2
-            + 2.0 * mu * (kappa**2 + tail.potential(r))
+            + kappa**2
+            + 2.0 * mu * tail.potential(r)
         )
         return Dp, q * D
 
@@ -253,9 +256,12 @@ def test_closed_long_range_ratio_crosses_a_wavefunction_node():
 
     def rhs(r, state):
         D, Dp = state
+        # kappa**2 = -k2 already contains 2 mu (this reference used to repeat
+        # the 2 mu (kappa**2 + V) bug of _long_closed_ratio, so it could not catch it)
         q = (
             ell * (ell + 1) / r**2
-            + 2.0 * mu * (kappa**2 + tail.potential(r))
+            + kappa**2
+            + 2.0 * mu * tail.potential(r)
         )
         return Dp, q * D
 
