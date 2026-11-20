@@ -1,21 +1,17 @@
 """Radial propagators: Johnson log-derivative (default) and renormalized Numerov.
 
-Log-derivative propagator (default since 0.1.1)
------------------------------------------------
+Log-derivative propagator (default)
+-----------------------------------
 :func:`log_derivative` and :func:`log_derivative_batch` propagate the
 log-derivative matrix ``Y = psi' psi^{-1}`` directly (B. R. Johnson,
 J. Comput. Phys. 13, 445 (1973); the method behind MOLSCAT's LDPROP).
-Because ``Y`` itself is carried, the result can be matched to the asymptotic
-functions at a *single* radius, and no derivative has to be reconstructed
-from wavefunction values at neighbouring grid points.  That removes two
-problems of the Numerov + two-point matching route:
+Because ``Y`` itself is carried, the result is matched to the asymptotic
+functions at a single radius, without reconstructing a derivative from
+wavefunction values at neighbouring grid points; this keeps full precision
+near threshold, where ``k h`` is tiny.
 
-* a first-order (``O(h)``) step error proportional to ``V(r_max)``, and
-* loss of precision near threshold, where ``k h`` is tiny and the
-  two-point difference cancels (the error grew as the step was refined).
-
-Renormalized Numerov (legacy, ``propagator="numerov"``)
--------------------------------------------------------
+Renormalized Numerov (``propagator="numerov"``)
+-----------------------------------------------
 We integrate the radial coupled equations
 
     psi''(R) = W(R) psi(R)
